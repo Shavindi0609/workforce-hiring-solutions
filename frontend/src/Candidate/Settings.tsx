@@ -13,7 +13,6 @@ import {
 import { MdOutlineBackup } from 'react-icons/md';
 import { FiSave } from 'react-icons/fi';
 import { BiCheck } from 'react-icons/bi';
-import './Settings.css';
 
 type TabType = 'general' | 'email' | 'notification' | 'security' | 'privacy' | 'backup';
 
