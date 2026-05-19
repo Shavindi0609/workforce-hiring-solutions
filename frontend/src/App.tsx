@@ -1,16 +1,28 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import SettingsPage from './Candidate/Setting/Settings'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import SignIn from './Candidate/SignIn';
+import ExportData from './Candidate/ExportData';
+import DashboardLayout from './components/DashboardLayout';
+import SettingsPage from './Candidate/Setting/Settings';
+import './App.css';
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/" element={<SettingsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        {/* Public Routes */}
+        <Route path="/signin" element={<SignIn />} />
+        
+        {/* Redirect empty path to settings (or dashboard) */}
+        <Route path="/" element={<Navigate to="/settings" />} />
+
+        {/* Protected Routes (Dashboard Layout) */}
+        <Route element={<DashboardLayout />}>
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/exportdata" element={<ExportData />} />
+        </Route>
       </Routes>
-    </Router>
-  )
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;
