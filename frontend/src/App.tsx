@@ -20,8 +20,7 @@ function App() {
 
         {/* Protected Routes (Dashboard Layout) */}
         <Route element={<DashboardLayout />}>
-               <Route path="/settings" element={<SettingsPage />} />
-          
+          <Route path="/settings" element={<SettingsPage />} />       
           <Route path="/exportdata" element={<ExportData />} />
           <Route path="/admin/reports" element={<Reports />} />
           <Route path="/admin/salary-insights" element={<SalaryInsights />} />

@@ -26,36 +26,49 @@ const SignIn = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
-  // Authentication Logic
+    // Authentication Logic
   const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+if (activeTab === 'signup') {
+  const { data, error } = await supabase.auth.signUp({ 
+    email, 
+    password,
+    options: { data: { full_name: fullName } } 
+  });
+
+  if (error) {
+    alert(error.message);
+    return; 
+  } 
+
+  await supabase.auth.signOut();
+  
+  alert('Sign up successful! Please check your email for confirmation.');
+  setActiveTab('signin'); 
+
+  } else {
+    // 2. Sign In Logic
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email, 
+      password 
+    });
     
-    if (activeTab === 'signup') {
-      const { error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: { data: { full_name: fullName } } 
-      });
-      if (error) {
-        alert(error.message);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (data.user) {
+      const ADMIN_EMAIL = "shavindialoka69@gmail.com"; 
+      if (data.user.email === ADMIN_EMAIL) {
+        navigate('/settings'); 
       } else {
-        alert('Sign up successful! Please check your email for confirmation.');
-        navigate('/exportdata');
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ 
-        email, 
-        password 
-      });
-      if (error) {
-        alert(error.message);
-      } else {
-        alert('Successfully signed in!');
-        navigate('/exportdata');
+        navigate('/exportdata'); 
       }
     }
-  };
-
+  }
+};
   return (
     <div className="auth-container">
       {/* LEFT SIDE */}

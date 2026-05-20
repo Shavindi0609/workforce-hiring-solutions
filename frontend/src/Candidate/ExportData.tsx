@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { FiDownload, FiInfo, FiLoader, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { FaFileCsv, FaFilePdf, FaFileExcel } from 'react-icons/fa';
 import { exportService } from '../services/exportService';
-import type { ExportFilters } from '../services/exportService';
 import '../global.css';
 
 const ExportData: React.FC = () => {
