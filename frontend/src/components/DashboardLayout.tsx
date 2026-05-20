@@ -10,6 +10,8 @@ const DashboardLayout: React.FC = () => {
         <div className="nav-links">
           <NavLink to="/dashboard" className="nav-link">Dashboard</NavLink>
           <NavLink to="/candidates" className="nav-link">Candidates</NavLink>
+          <NavLink to="/admin/reports" className="nav-link">Reports</NavLink>
+          <NavLink to="/admin/salary-insights" className="nav-link">Salary Insights</NavLink>
           <NavLink to="/exportdata" className="nav-link">Export Data</NavLink>
         </div>
       </div>
