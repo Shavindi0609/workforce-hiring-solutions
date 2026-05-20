@@ -18,7 +18,6 @@ function App() {
 
         {/* Protected Routes (Dashboard Layout) */}
         <Route element={<DashboardLayout />}>
-          
           <Route path="/exportdata" element={<ExportData />} />
         </Route>
       </Routes>
