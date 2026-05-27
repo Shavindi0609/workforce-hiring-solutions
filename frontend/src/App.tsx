@@ -6,6 +6,7 @@ import DashboardLayout from './components/DashboardLayout';
 import SettingsPage from './Candidate/Settings';
 import Reports from './Admin/Reports';
 import SalaryInsights from './Admin/SalaryInsights';
+import ProfileCreated from './Candidate/ProfileCreated';
 import './App.css';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/signin" element={<SignIn />} />
         <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+        <Route path="/profile-created" element={<ProfileCreated />} /> 
   
         {/* Redirect empty path to settings (or dashboard) */}
        
@@ -26,6 +28,7 @@ function App() {
           <Route path="/exportdata" element={<ExportData />} />
           <Route path="/admin/reports" element={<Reports />} />
           <Route path="/admin/salary-insights" element={<SalaryInsights />} />
+        
         </Route>
       </Routes>
     </BrowserRouter>
