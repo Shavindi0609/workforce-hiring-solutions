@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl p-8 shadow-sm;
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  .step-active {
+    @apply inline-flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-semibold;
+  }
+  
+  .step-inactive {
+    @apply inline-flex items-center justify-center w-8 h-8 bg-slate-200 text-slate-600 rounded-full text-sm font-semibold;
+  }
+  
+  .step-completed {
+    @apply inline-flex items-center justify-center w-8 h-8 bg-green-600 text-white rounded-full text-sm font-semibold;
+  }
+  
+  .progress-line {
+    @apply w-8 h-0.5 bg-slate-200 mx-1;
+  }
+  
+  .progress-line-active {
+    @apply w-8 h-0.5 bg-green-600 mx-1;
+  }
+  
+  .btn-primary {
+    @apply inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-6 py-2.5 rounded-lg transition-all text-sm hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-md;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
