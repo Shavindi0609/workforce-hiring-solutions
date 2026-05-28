@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
-import { Briefcase, Building, DollarSign, Clock, Tag, ArrowLeft, ArrowRight } from 'lucide-react';
-import type { ProfessionalInfoData, BasicInfoData } from './types';
+import type { ChangeEvent, FormEvent } from 'react';
+import { Briefcase, Clock, ArrowLeft, ArrowRight, Check, ChevronDown } from 'lucide-react';
+import type { ProfessionalInfoData } from './types';
+import manImage from '../assets/OIP.webp';
 
 interface ProfessionalInfoProps {
   onNext: (data: ProfessionalInfoData) => void;
   onBack: () => void;
   initialData?: ProfessionalInfoData;
-  basicData?: BasicInfoData;
 }
 
-export default function ProfessionalInfo({ onNext, onBack, initialData, basicData }: ProfessionalInfoProps) {
+export default function ProfessionalInfo({ onNext, onBack, initialData }: ProfessionalInfoProps) {
   const [formData, setFormData] = useState<ProfessionalInfoData>({
     currentRole: initialData?.currentRole || '',
     company: initialData?.company || '',
@@ -20,37 +20,13 @@ export default function ProfessionalInfo({ onNext, onBack, initialData, basicDat
     expectedCtc: initialData?.expectedCtc || '',
     primarySkills: initialData?.primarySkills || [],
     jobType: initialData?.jobType || 'Full-time',
+    interestedField: initialData?.interestedField || '',
+    yearsOfExperience: initialData?.yearsOfExperience || '',
   });
-
-  const [skillInput, setSkillInput] = useState('');
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const addSkill = () => {
-    if (skillInput.trim() && !formData.primarySkills.includes(skillInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        primarySkills: [...prev.primarySkills, skillInput.trim()]
-      }));
-      setSkillInput('');
-    }
-  };
-
-  const removeSkill = (skill: string) => {
-    setFormData(prev => ({
-      ...prev,
-      primarySkills: prev.primarySkills.filter(s => s !== skill)
-    }));
-  };
-
-  const handleKeyPress = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addSkill();
-    }
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -58,247 +34,200 @@ export default function ProfessionalInfo({ onNext, onBack, initialData, basicDat
     onNext(formData);
   };
 
+  // Interested Field options
+  const interestedFields = [
+    'Software Development',
+    'Data Science & AI',
+    'Cloud Computing',
+    'DevOps & SRE',
+    'Cybersecurity',
+    'Product Management',
+    'UI/UX Design',
+    'Quality Assurance',
+    'Technical Writing',
+    'IT Support',
+    'Network Engineering',
+    'Database Administration',
+  ];
+
+  // Years of Experience options
+  const yearsOptions = [
+    'Fresher (0-1 years)',
+    '1-3 years',
+    '3-5 years',
+    '5-8 years',
+    '8-10 years',
+    '10+ years',
+  ];
+
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 fade-in">
-      <div className="w-full max-w-5xl card">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-6 mb-8 gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4 font-sans">
+      
+      {/* ===== HEADER & STEPPER - ABOVE CONTAINER ===== */}
+      <div className="w-full max-w-6xl mb-6">
+        <div className="px-12 pt-4 pb-2">
           
-          
-          {/* Progress Steps */}
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400 overflow-x-auto py-2">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="step-completed">✓</span>
-              <span className="text-green-600">Basic Information</span>
+          {/* Stepper row */}
+          <div className="flex flex-wrap items-center gap-y-3 gap-x-5 text-xs font-medium text-slate-500">
+            {/* Step 1 - completed */}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-lime-500 text-white flex items-center justify-center shadow-sm">
+                <Check className="w-4 h-4" strokeWidth={4} />
+              </div>
+              <span className="text-gray-900">Basic Information</span>
             </div>
-            <div className="progress-line-active"></div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="step-active">2</span>
-              <span className="text-blue-600 font-semibold">Professional Info</span>
+            <div className="w-16 h-px bg-slate-300"></div>
+
+            {/* Step 2 - active */}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-lime-500 text-white flex items-center justify-center text-sm font-bold shadow-sm">2</div>
+              <span className="text-gray-900 font-semibold tracking-tight">Professional Info</span>
             </div>
-            <div className="progress-line"></div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="step-inactive">3</span>
-              <span>Skills & Experience</span>
+            <div className="w-16 h-px bg-slate-300"></div>
+
+            {/* Step 3 */}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full border border-gray-500 text-slate-500 flex items-center justify-center text-sm font-medium">3</div>
+              <span className="text-gray-900">Skills & Experience</span>
             </div>
-            <div className="progress-line"></div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="step-inactive">4</span>
-              <span>Additional Details</span>
+            <div className="w-16 h-px bg-slate-300"></div>
+
+            {/* Step 4 */}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full border border-gray-500 text-slate-500 flex items-center justify-center text-sm font-medium">4</div>
+              <span className="text-gray-900">Additional Details</span>
             </div>
-            <div className="progress-line"></div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="step-inactive">5</span>
-              <span>Upload CV</span>
+            <div className="w-16 h-px bg-slate-300"></div>
+
+            {/* Step 5 */}
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full border border-gray-500 text-slate-500 flex items-center justify-center text-sm font-medium">5</div>
+              <span className="text-gray-900">Upload CV</span>
             </div>
           </div>
         </div>
+      </div>
 
+      {/* ===== MAIN CONTAINER ===== */}
+      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-slate-200/80 overflow-hidden transition-all duration-300 px-4 pt-4">
+        
+        {/* ===== FORM SECTION ===== */}
         <form onSubmit={handleSubmit}>
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-slate-900 mb-1">Professional Information</h2>
-            <p className="text-sm text-slate-500">Tell us about your work experience</p>
+          <div className="px-8 pt-6 pb-12">
+            <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">Professional Information</h2>
+            <p className="text-slate-500 text-md mt-1">Tell us about your professional background</p>
           </div>
 
-          <div className="space-y-6">
-            {/* Current Role */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Current Role <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="currentRole"
-                    required
-                    value={formData.currentRole}
-                    onChange={handleChange}
-                    placeholder="e.g., Senior Software Engineer"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Company */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Company <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="company"
-                    required
-                    value={formData.company}
-                    onChange={handleChange}
-                    placeholder="e.g., Google, Amazon, Startup"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Experience & Notice Period */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Total Experience (Years) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  name="experience"
-                  required
-                  min="0"
-                  max="50"
-                  step="0.5"
-                  value={formData.experience}
-                  onChange={handleChange}
-                  placeholder="e.g., 5"
-                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Notice Period <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <select
-                    name="noticePeriod"
-                    required
-                    value={formData.noticePeriod}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500 appearance-none cursor-pointer"
-                  >
-                    <option value="">Select notice period</option>
-                    <option value="Immediate">Immediate (15 days)</option>
-                    <option value="30 days">30 days</option>
-                    <option value="45 days">45 days</option>
-                    <option value="60 days">60 days</option>
-                    <option value="90 days">90 days</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* CTC Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Current CTC (₹/year)
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="currentCtc"
-                    value={formData.currentCtc}
-                    onChange={handleChange}
-                    placeholder="e.g., 15,00,000"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                  Expected CTC (₹/year) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="expectedCtc"
-                    required
-                    value={formData.expectedCtc}
-                    onChange={handleChange}
-                    placeholder="e.g., 20,00,000"
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Job Type */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Preferred Job Type <span className="text-red-500">*</span>
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {(['Full-time', 'Part-time', 'Contract', 'Remote'] as const).map((type) => (
-                  <label key={type} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="jobType"
-                      value={type}
-                      checked={formData.jobType === type}
-                      onChange={handleChange}
-                      className="w-4 h-4 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-slate-700">{type}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Skills */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                Primary Skills <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input
-                  type="text"
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type skill and press Enter (e.g., React, Python, AWS)"
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:border-blue-500"
-                />
-              </div>
+          <div className="px-8 pb-6">
+            <div className="flex flex-col lg:flex-row gap-8">
               
-              {/* Skills Tags */}
-              {formData.primarySkills.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {formData.primarySkills.map((skill) => (
-                    <span
-                      key={skill}
-                      onClick={() => removeSkill(skill)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-lg cursor-pointer hover:bg-red-50 hover:text-red-600 transition-colors"
+              {/* LEFT COLUMN - Form Fields - 2/3 width */}
+              <div className="w-full lg:w-2/3 space-y-12">
+                {/* Interested Field */}
+                <div>
+                  <label className="block text-md font-semibold text-slate-700 mb-4">
+                    Interested Field <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-lime-500" />
+                    <select
+                      name="interestedField"
+                      required
+                      value={formData.interestedField}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-md focus:border-lime-400 focus:ring-2 focus:ring-lime-100 outline-none transition-all appearance-none cursor-pointer text-slate-600"
                     >
-                      {skill}
-                      <span className="text-xs">✕</span>
-                    </span>
-                  ))}
+                      <option value="">Select your interested field</option>
+                      {interestedFields.map(field => (
+                        <option key={field} value={field}>{field}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  </div>
                 </div>
-              )}
-              <p className="text-xs text-slate-400 mt-1.5">Click on skill to remove</p>
+
+                {/* Years of Experience */}
+                <div>
+                  <label className="block text-md font-semibold text-slate-700 mb-4">
+                    Years of Experience <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 transition-colors group-focus-within:text-lime-500" />
+                    <select
+                      name="yearsOfExperience"
+                      required
+                      value={formData.yearsOfExperience}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-md focus:border-lime-400 focus:ring-2 focus:ring-lime-100 outline-none transition-all appearance-none cursor-pointer text-slate-600"
+                    >
+                      <option value="">Select years of experience</option>
+                      {yearsOptions.map(option => (
+                        <option key={option} value={option}>{option}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN - Illustration Image - 1/3 width - No background */}
+              <div className="w-full lg:w-1/3 flex flex-col gap-4">
+                <div className="w-full flex items-center justify-center">
+                  <img 
+                    src={manImage}
+                    alt="Professional man teaching illustration"
+                    className="w-full h-auto max-w-[180px] object-contain rounded-lg "
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'text-center';
+                        fallback.innerHTML = `
+                          <svg class="w-24 h-24 mx-auto text-lime-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                          </svg>
+                          <p class="text-sm font-medium text-slate-600 mt-2">Professional Image</p>
+                        `;
+                        parent.appendChild(fallback);
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Info Notice - Below the image */}
+                <div className="flex gap-3 bg-blue-50/80 border border-blue-100 rounded-xl p-4">
+                  <svg className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-gray-800/80 leading-relaxed font-medium">
+                    Your selected field will help us show relevant skills options in the next step.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-between mt-8 border-t border-slate-100 pt-6">
+          {/* FOOTER BUTTONS */}
+          <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/40 flex justify-between">
             <button
               type="button"
               onClick={onBack}
-              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold px-6 py-2.5 rounded-lg transition-all text-sm"
+              className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-3 px-8 rounded-xl shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2 text-sm group"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
               Back
             </button>
-            <button type="submit" className="btn-primary group">
+            <button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm tracking-wide group focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2"
+            >
               Continue
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
         </form>
-
       </div>
     </div>
   );

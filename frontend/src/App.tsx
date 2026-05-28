@@ -4,6 +4,7 @@ import BasicInformation from './Candidate/BasicInformation';
 import ProfessionalInfo from './Candidate/ProfessionalInfo';
 import SkillsExperience from './Candidate/SkillsExperience';
 import AdditionalDetails from './Candidate/AdditionalDetails';
+import UploadCV from './Candidate/UploadCV';
 import SignIn from './Candidate/SignIn';
 import Home from './Candidate/Home';
 import ExportData from './Candidate/ExportData';
@@ -24,6 +25,7 @@ const initialFormData: CandidateFormData = {
   availability: '',
   willingToContact: '',
   salaryRange: '',
+  cv: null,
 };
 
 // Registration Flow Component
@@ -39,12 +41,20 @@ function RegistrationFlow() {
 
   const handleBasicNext = (data: BasicInfoData) => {
     setBasicData(data);
-    navigate('/candidate/professional');
+    navigate('/candidate/registration/professional');
   };
 
   const handleProfessionalNext = (data: ProfessionalInfoData) => {
     setProfessionalData(data);
-    navigate('/candidate/skills');
+    navigate('/candidate/registration/skills');
+  };
+
+  const handleSkillsNext = () => {
+    navigate('/candidate/registration/additional');
+  };
+
+  const handleAdditionalNext = () => {
+    navigate('/candidate/registration/upload');
   };
 
   const handleFinalSubmit = () => {
@@ -77,7 +87,6 @@ function RegistrationFlow() {
               onNext={handleProfessionalNext}
               onBack={() => navigate('/candidate/registration/basic')}
               initialData={professionalData ?? undefined}
-              basicData={basicData ?? undefined}
             />
           }
         />
@@ -87,7 +96,7 @@ function RegistrationFlow() {
             <SkillsExperience
               formData={formData}
               updateFormData={updateFormData}
-              onNext={() => navigate('/candidate/registration/additional')}
+              onNext={handleSkillsNext}
               onBack={() => navigate('/candidate/registration/professional')}
               basicData={basicData ?? undefined}
             />
@@ -99,13 +108,24 @@ function RegistrationFlow() {
             <AdditionalDetails
               formData={formData}
               updateFormData={updateFormData}
-              onNext={handleFinalSubmit}
+              onNext={handleAdditionalNext}
               onBack={() => navigate('/candidate/registration/skills')}
               basicData={basicData ?? undefined}
             />
           }
         />
-        
+        <Route
+          path="/upload"
+          element={
+            <UploadCV
+              formData={formData}
+              updateFormData={updateFormData}
+              onNext={handleFinalSubmit}
+              onBack={() => navigate('/candidate/registration/additional')}
+              basicData={basicData ?? undefined}
+            />
+          }
+        />
         <Route path="/" element={<Navigate to="/candidate/registration/basic" replace />} />
         <Route path="*" element={<Navigate to="/candidate/registration/basic" replace />} />
       </Routes>

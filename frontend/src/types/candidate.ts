@@ -4,6 +4,7 @@ export interface CandidateFormData {
   availability?: string;
   willingToContact?: string;
   salaryRange?: string;
+  cv?: File | null;
 }
 
 import type { BasicInfoData } from '../Candidate/types';
