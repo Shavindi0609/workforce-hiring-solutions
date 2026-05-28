@@ -1,286 +1,112 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  FiBell,
-  FiBookOpen,
-  FiBriefcase,
-  FiCheckCircle,
-  FiChevronDown,
-  FiClipboard,
-  FiFileText,
-  FiHelpCircle,
-  FiLogOut,
-  FiSettings,
-  FiUploadCloud,
-  FiUser,
-} from 'react-icons/fi';
+import React, { useState } from 'react';
+import { Search, Filter, ChevronDown } from 'lucide-react'; 
 
-type DashboardSection = {
-  title: string;
-  description: string;
-  status: string;
-  route: string;
-  icon: ReactNode;
-};
+interface Candidate {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  avatar: string;
+  field: string;
+  experience: string;
+  status: 'Actively Looking' | 'Open to Opportunities';
+  availability: string;
+  salary: string;
+  joined: string;
+}
 
-const candidate = {
-  name: 'John Doe',
-  id: 'WHS-2026-1048',
-  profileStatus: 'Active',
-  profileStrength: 85,
-  applicationProgress: '5/5',
-};
-
-const sections: DashboardSection[] = [
-  {
-    title: 'Basic Information',
-    description: 'Personal details and contact information',
-    status: 'Completed',
-    route: '/candidate/basic-information',
-    icon: <FiUser />,
-  },
-  {
-    title: 'Professional Information',
-    description: 'Career preferences and work history',
-    status: 'Completed',
-    route: '/candidate/professional-information',
-    icon: <FiBriefcase />,
-  },
-  {
-    title: 'Skills & Experience',
-    description: 'Technical skills and years of experience',
-    status: 'Completed',
-    route: '/candidate/skills-experience',
-    icon: <FiBookOpen />,
-  },
-  {
-    title: 'Additional Details',
-    description: 'Availability, salary expectations, and notes',
-    status: 'Completed',
-    route: '/candidate/additional-details',
-    icon: <FiClipboard />,
-  },
-  {
-    title: 'Upload CV',
-    description: 'Latest resume and supporting documents',
-    status: 'Completed',
-    route: '/candidate/upload-cv',
-    icon: <FiUploadCloud />,
-  },
+const candidatesData: Candidate[] = [
+  { id: 1, name: 'John Doe', email: 'john.doe@email.com', phone: '+91 98765 43210', avatar: 'https://i.pravatar.cc/150?u=1', field: 'Web Development', experience: '5+ Years', status: 'Actively Looking', availability: 'Immediate', salary: '80,000 - 120,000', joined: 'Jun 20, 2024' },
+  { id: 2, name: 'Sarah Johnson', email: 'sarah.j@email.com', phone: '+91 87654 32109', avatar: 'https://i.pravatar.cc/150?u=2', field: 'UI/UX Design', experience: '3+ Years', status: 'Open to Opportunities', availability: '2 Weeks', salary: '60,000 - 90,000', joined: 'Jun 19, 2024' },
+  { id: 3, name: 'Michael Smith', email: 'michael.s@email.com', phone: '+91 76543 21098', avatar: 'https://i.pravatar.cc/150?u=3', field: 'Data Science', experience: '4+ Years', status: 'Actively Looking', availability: '1 Month', salary: '100,000 - 150,000', joined: 'Jun 18, 2024' },
+  { id: 4, name: 'Emily Davis', email: 'emily.d@email.com', phone: '+91 65432 10987', avatar: 'https://i.pravatar.cc/150?u=4', field: 'Digital Marketing', experience: '2+ Years', status: 'Open to Opportunities', availability: '2 Months', salary: '50,000 - 80,000', joined: 'Jun 17, 2024' },
+  { id: 5, name: 'David Wilson', email: 'david.w@email.com', phone: '+91 54321 09876', avatar: 'https://i.pravatar.cc/150?u=5', field: 'Mobile Development', experience: '6+ Years', status: 'Actively Looking', availability: 'Immediate', salary: '90,000 - 130,000', joined: 'Jun 16, 2024' },
+  { id: 6, name: 'Olivia Brown', email: 'olivia.b@email.com', phone: '+91 43210 98765', avatar: 'https://i.pravatar.cc/150?u=6', field: 'HR & Recruitment', experience: '3+ Years', status: 'Open to Opportunities', availability: '3 Months', salary: '40,000 - 70,000', joined: 'Jun 15, 2024' },
+  { id: 7, name: 'James Taylor', email: 'james.t@email.com', phone: '+91 32109 87654', avatar: 'https://i.pravatar.cc/150?u=7', field: 'DevOps', experience: '5+ Years', status: 'Actively Looking', availability: '2 Weeks', salary: '110,000 - 160,000', joined: 'Jun 14, 2024' },
+  { id: 8, name: 'Sophia Martinez', email: 'sophia.m@email.com', phone: '+91 21098 76543', avatar: 'https://i.pravatar.cc/150?u=8', field: 'AI / ML', experience: '4+ Years', status: 'Actively Looking', availability: '1 Month', salary: '120,000 - 180,000', joined: 'Jun 13, 2024' },
+  { id: 9, name: 'Liam Wilson', email: 'liam.w@email.com', phone: '+91 10987 65432', avatar: 'https://i.pravatar.cc/150?u=9', field: 'Web Development', experience: '2+ Years', status: 'Actively Looking', availability: 'Immediate', salary: '70,000 - 100,000', joined: 'Jun 12, 2024' },
+  { id: 10, name: 'Emma Garcia', email: 'emma.g@email.com', phone: '+91 09876 54321', avatar: 'https://i.pravatar.cc/150?u=10', field: 'Data Science', experience: '3+ Years', status: 'Open to Opportunities', availability: '2 Weeks', salary: '95,000 - 140,000', joined: 'Jun 11, 2024' },
 ];
 
-const activities = [
-  'Profile strength increased to 85%',
-  'CV uploaded successfully',
-  'Skills & Experience section updated',
-  'Application progress marked complete',
-  'Professional Information reviewed',
-  'Basic Information verified',
-];
-
-const notifications = [
-  'Your candidate profile is visible to recruiters.',
-  'A new profile improvement tip is available.',
-  'Your CV was processed successfully.',
-];
-
-function CandidateDashboard() {
-  const navigate = useNavigate();
-  const activityRef = useRef<HTMLDivElement | null>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [showAllActivity, setShowAllActivity] = useState(false);
-
-  const visibleActivities = useMemo(
-    () => (showAllActivity ? activities : activities.slice(0, 4)),
-    [showAllActivity],
-  );
-
-  const goTo = (path: string) => {
-    navigate(path);
-  };
-
-  const handleViewAllActivity = () => {
-    setShowAllActivity(true);
-    window.setTimeout(() => activityRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
-  };
-
+export default function CandidatesPage() {
   return (
-    <main className="candidate-dashboard-page">
-      <nav className="candidate-dashboard-navbar" aria-label="Candidate dashboard navigation">
-        <button className="candidate-dashboard-logo" type="button" onClick={() => goTo('/candidate/dashboard')}>
-          Join Our Candidate Pool
-        </button>
-
-        <div className="candidate-dashboard-nav-actions">
-          <button
-            className="candidate-dashboard-icon-button"
-            type="button"
-            aria-label="Open notifications"
-            onClick={() => setNotificationsOpen((open) => !open)}
-          >
-            <FiBell />
-            <span className="candidate-dashboard-badge">{notifications.length}</span>
-          </button>
-
-          <div className="candidate-dashboard-avatar-wrap">
-            <button
-              className="candidate-dashboard-avatar-button"
-              type="button"
-              onClick={() => setDropdownOpen((open) => !open)}
-              aria-expanded={dropdownOpen}
-            >
-              <span className="candidate-dashboard-avatar">JD</span>
-              <span>{candidate.name}</span>
-              <FiChevronDown />
-            </button>
-
-            {dropdownOpen && (
-              <div className="candidate-dashboard-menu">
-                <button type="button" onClick={() => goTo('/candidate/profile')}>
-                  <FiUser />
-                  Profile
-                </button>
-                <button type="button" onClick={() => goTo('/settings')}>
-                  <FiSettings />
-                  Settings
-                </button>
-                <button type="button" onClick={() => goTo('/signin')}>
-                  <FiLogOut />
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-gray-50 p-8">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold">Candidates</h1>
+          <p className="text-sm text-gray-500">Dashboard / Candidates</p>
         </div>
-      </nav>
+        <div className="flex gap-3">
+          <button className="px-4 py-2 bg-white border rounded-lg text-sm font-medium">Export</button>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">+ Add Candidate</button>
+        </div>
+      </div>
 
-      {notificationsOpen && (
-        <section className="candidate-dashboard-notification-panel" aria-label="Notifications">
-          <div>
-            <h2>Notifications</h2>
-            <button type="button" onClick={() => setNotificationsOpen(false)}>
-              Close
-            </button>
-          </div>
-          <ul>
-            {notifications.map((notification) => (
-              <li key={notification}>{notification}</li>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-4 gap-6 mb-8">
+        <StatCard title="Total Candidates" value="2,458" sub="100% of total" />
+        <StatCard title="Actively Looking" value="1,245" sub="50.7% of total" color="text-green-600" />
+        <StatCard title="Open to Opportunities" value="1,213" sub="49.3% of total" color="text-orange-500" />
+        <StatCard title="Available Immediately" value="798" sub="32.5% of total" color="text-blue-600" />
+      </div>
+
+      {/* Search and Filters Section  */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-200 mb-6 flex items-center gap-4">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+          <input type="text" placeholder="Search by name, email, skill..." className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none" />
+        </div>
+        <button className="flex items-center gap-2 px-4 py-2 border rounded-xl text-sm text-gray-600"><Filter size={16}/> Filter</button>
+        <button className="flex items-center gap-2 px-4 py-2 border rounded-xl text-sm text-gray-600">All Fields <ChevronDown size={16}/></button>
+        <button className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-semibold">Apply Filters</button>
+      </div>
+
+      {/* Candidates Table */}
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="text-gray-400 text-xs uppercase border-b">
+              <th className="p-4"><input type="checkbox" /></th>
+              <th className="p-4">Candidate</th>
+              <th className="p-4">Field</th>
+              <th className="p-4">Experience</th>
+              <th className="p-4">Status</th>
+              <th className="p-4">Availability</th>
+              <th className="p-4">Salary Range</th>
+              <th className="p-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            {candidatesData.map((c) => (
+              <tr key={c.id} className="border-b hover:bg-gray-50">
+                <td className="p-4"><input type="checkbox" /></td>
+                <td className="p-4 flex items-center gap-3">
+                  <img src={c.avatar} className="w-8 h-8 rounded-full" alt="" />
+                  <div>
+                    <p className="font-bold">{c.name}</p>
+                    <p className="text-xs text-gray-400">{c.email}</p>
+                  </div>
+                </td>
+                <td className="p-4">{c.field}</td>
+                <td className="p-4">{c.experience}</td>
+                <td className="p-4"><span className={`px-2 py-1 rounded-full text-[10px] ${c.status === 'Actively Looking' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>{c.status}</span></td>
+                <td className="p-4">{c.availability}</td>
+                <td className="p-4">{c.salary}</td>
+                <td className="p-4 text-blue-600 cursor-pointer">View</td>
+              </tr>
             ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="candidate-dashboard-hero">
-        <div className="candidate-dashboard-heading">
-          <h1>
-            Welcome back, John Doe <span aria-hidden="true">{'\u{1F44B}'}</span>
-          </h1>
-          <p>Track your candidate profile, application progress, and the next best actions from one place.</p>
-        </div>
-        <button className="candidate-dashboard-button" type="button" onClick={() => goTo('/candidate/edit-profile')}>
-          <FiUser />
-          Edit Profile
-        </button>
-      </section>
-
-      <section className="candidate-dashboard-grid candidate-dashboard-summary-grid" aria-label="Candidate summary">
-        <article className="candidate-dashboard-card candidate-dashboard-stat">
-          <span>Candidate ID</span>
-          <strong>{candidate.id}</strong>
-        </article>
-        <article className="candidate-dashboard-card candidate-dashboard-stat">
-          <span>Profile Status</span>
-          <strong>{candidate.profileStatus}</strong>
-        </article>
-        <article className="candidate-dashboard-card candidate-dashboard-stat">
-          <span>Profile Strength</span>
-          <strong>{candidate.profileStrength}%</strong>
-          <div className="candidate-dashboard-progress">
-            <span style={{ width: `${candidate.profileStrength}%` }} />
-          </div>
-        </article>
-        <article className="candidate-dashboard-card candidate-dashboard-stat">
-          <span>Application Progress</span>
-          <strong>{candidate.applicationProgress}</strong>
-        </article>
-      </section>
-
-      <section className="candidate-dashboard-main-grid">
-        <div className="candidate-dashboard-left-column">
-          <section className="candidate-dashboard-card">
-            <div className="candidate-dashboard-section-header">
-              <h2>Application Sections</h2>
-              <button type="button" onClick={() => goTo('/candidate/edit-profile')}>
-                Update Profile
-              </button>
-            </div>
-
-            <div className="candidate-dashboard-section-list">
-              {sections.map((section) => (
-                <button
-                  className="candidate-dashboard-section-card"
-                  type="button"
-                  key={section.title}
-                  onClick={() => goTo(section.route)}
-                >
-                  <span className="candidate-dashboard-icon">{section.icon}</span>
-                  <span>
-                    <strong>{section.title}</strong>
-                    <small>{section.description}</small>
-                  </span>
-                  <em>{section.status}</em>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="candidate-dashboard-card" ref={activityRef}>
-            <div className="candidate-dashboard-section-header">
-              <h2>Recent Activity</h2>
-              <button type="button" onClick={handleViewAllActivity}>
-                View all activity
-              </button>
-            </div>
-            <ul className="candidate-dashboard-activity-list">
-              {visibleActivities.map((activity) => (
-                <li key={activity}>
-                  <FiCheckCircle />
-                  <span>{activity}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
-
-        <aside className="candidate-dashboard-right-column">
-          <section className="candidate-dashboard-quick-actions">
-            <button type="button" className="candidate-dashboard-card candidate-dashboard-action-card" onClick={() => goTo('/candidate/application-progress')}>
-              <FiClipboard />
-              <span>View Application Progress</span>
-            </button>
-            <button type="button" className="candidate-dashboard-card candidate-dashboard-action-card" onClick={() => goTo('/candidate/help-center')}>
-              <FiHelpCircle />
-              <span>Need Help?</span>
-            </button>
-            <button type="button" className="candidate-dashboard-card candidate-dashboard-action-card" onClick={() => setNotificationsOpen(true)}>
-              <FiBell />
-              <span>Notifications</span>
-            </button>
-          </section>
-
-          <section className="candidate-dashboard-card candidate-dashboard-tips-card">
-            <FiFileText />
-            <h2>Tips to Improve Your Profile</h2>
-            <p>Add measurable achievements and keep your CV updated so recruiters can quickly understand your fit.</p>
-            <button type="button" onClick={() => goTo('/candidate/edit-profile')}>
-              Update Profile
-            </button>
-          </section>
-        </aside>
-      </section>
-    </main>
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
-export default CandidateDashboard;
+const StatCard = ({ title, value, sub, color = "text-gray-900" }: any) => (
+  <div className="bg-white p-6 rounded-2xl border shadow-sm">
+    <p className="text-gray-400 text-xs uppercase">{title}</p>
+    <h3 className={`text-3xl font-bold ${color} mt-2`}>{value}</h3>
+    <p className="text-xs text-gray-400 mt-1">{sub}</p>
+  </div>
+);
