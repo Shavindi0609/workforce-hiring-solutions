@@ -143,15 +143,19 @@ export default function Home() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-[68px] flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b3d6b] to-[#2fb852] flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
-              <span className="text-white font-black text-[15px]">W</span>
-            </div>
-            <span className="font-bold text-[17px] tracking-tight text-[#0b3d6b]">
-              Workforce<span className="text-[#2fb852]">Hiring</span>
-            </span>
-          </Link>
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3 group">
+        <div className="w-12 h-12 rounded-full  flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow overflow-hidden border border-white">
+            <img 
+            src='assets/logo.png' 
+            alt="Logo" 
+            className="w-full h-full object-cover" 
+            />
+        </div>
+        <span className="font-bold text-[17px] tracking-tight text-[#0b3d6b]">
+            Workforce<span className="text-[#2fb852]">Hiring</span>
+        </span>
+        </Link>
 
           {/* Nav links (hidden on mobile) */}
           <nav className="hidden md:flex items-center gap-7 text-[14px] font-medium text-gray-600">
@@ -451,6 +455,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
 
       {/* ════════════════════════ TESTIMONIALS ═══════════════════════════════ */}
       <section className="py-28 px-6 lg:px-10 bg-[#061e35] relative overflow-hidden">
