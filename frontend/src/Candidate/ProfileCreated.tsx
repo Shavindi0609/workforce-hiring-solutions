@@ -4,7 +4,7 @@ import { FiCheckCircle, FiMail, FiUser, FiFileText, FiDatabase, FiHeadphones, Fi
 export default function ProfileCreated() {
   return (
     <div className="flex h-screen w-full bg-[#f8f9fc] font-sans">
-      {/* Sidebar - වම් පස කොටස */}
+      {/* Sidebar*/}
       <aside className="w-[30%] bg-gradient-to-br from-[#0b5d90] to-[#39a75f] text-white p-10 flex flex-col justify-between">
         <div className="font-bold tracking-widest text-sm">WORKFORCE HIRING SOLUTIONS</div>
         <div>
@@ -16,7 +16,7 @@ export default function ProfileCreated() {
         </div>
       </aside>
 
-      {/* Main Content - දකුණු පස කොටස (ඔබ ඉල්ලූ පරිදි) */}
+      {/* Main Content */}
       <main className="w-[70%] p-10 flex flex-col gap-6 overflow-y-auto">
         <div className="flex justify-end items-center text-sm text-gray-500 gap-2">
           <FiHeadphones /> Need Help? <span className="font-semibold text-gray-800">support@workforcehs.com</span>
@@ -78,7 +78,7 @@ export default function ProfileCreated() {
           <h3 className="text-lg font-bold text-gray-800 mb-8 text-center">What happens next?</h3>
           
           <div className="flex justify-between items-start relative">
-            {/* Connecting Line - පියවර සම්බන්ධ කරන රේඛාව */}
+            {/* Connecting Line*/}
             <div className="absolute top-[20px] left-[10%] right-[10%] h-[2px] bg-gray-100 -z-0"></div>
 
             {[
