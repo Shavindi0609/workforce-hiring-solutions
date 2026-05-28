@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { KeyboardEvent, FormEvent } from 'react';
 import { Tag, Info, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import type { FormComponentProps } from '../types/candidate';
@@ -162,6 +163,7 @@ export default function SkillsExperience({
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
               Back
             </button>
+             <Link to="/candidate/registration/additional">
             <button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm tracking-wide group focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2"
@@ -169,6 +171,7 @@ export default function SkillsExperience({
               Continue
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
+            </Link>
           </div>
         </form>
       </div>

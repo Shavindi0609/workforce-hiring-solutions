@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
-import { User, Mail, Calendar, Link, Info, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import type { ChangeEvent, FormEvent} from 'react';
+import { User, Mail, Calendar, Info, ArrowRight } from 'lucide-react';
 
 // ===================== TYPES =====================
 export interface BasicInfoData {
@@ -24,7 +25,7 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
   const [formData, setFormData] = useState<BasicInfoData>({
     fullName: initialData?.fullName || '',
     email: initialData?.email || '',
-    countryCode: initialData?.countryCode || '+91',
+    countryCode: initialData?.countryCode || '+94', // Changed default to Sri Lanka
     mobileNumber: initialData?.mobileNumber || '',
     dob: initialData?.dob || '',
     linkedin: initialData?.linkedin || '',
@@ -76,33 +77,34 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
     onNext({ ...formData, age: displayAge });
   };
 
-  // Country code options with flag images
+  // Country code options (only codes, no country names)
   const countryOptions = [
-    { code: '+91', country: 'India', flagCode: 'in' },
-    { code: '+1', country: 'USA', flagCode: 'us' },
-    { code: '+44', country: 'UK', flagCode: 'gb' },
-    { code: '+61', country: 'Australia', flagCode: 'au' },
-    { code: '+86', country: 'China', flagCode: 'cn' },
-    { code: '+81', country: 'Japan', flagCode: 'jp' },
-    { code: '+49', country: 'Germany', flagCode: 'de' },
-    { code: '+33', country: 'France', flagCode: 'fr' },
-    { code: '+39', country: 'Italy', flagCode: 'it' },
-    { code: '+34', country: 'Spain', flagCode: 'es' },
-    { code: '+55', country: 'Brazil', flagCode: 'br' },
-    { code: '+52', country: 'Mexico', flagCode: 'mx' },
-    { code: '+82', country: 'South Korea', flagCode: 'kr' },
-    { code: '+65', country: 'Singapore', flagCode: 'sg' },
-    { code: '+60', country: 'Malaysia', flagCode: 'my' },
-    { code: '+31', country: 'Netherlands', flagCode: 'nl' },
-    { code: '+46', country: 'Sweden', flagCode: 'se' },
-    { code: '+47', country: 'Norway', flagCode: 'no' },
-    { code: '+45', country: 'Denmark', flagCode: 'dk' },
-    { code: '+358', country: 'Finland', flagCode: 'fi' },
-    { code: '+41', country: 'Switzerland', flagCode: 'ch' },
-    { code: '+32', country: 'Belgium', flagCode: 'be' },
-    { code: '+351', country: 'Portugal', flagCode: 'pt' },
-    { code: '+30', country: 'Greece', flagCode: 'gr' },
-    { code: '+27', country: 'South Africa', flagCode: 'za' },
+    { code: '+94', flagCode: 'lk' }, // Sri Lanka (added at top)
+    { code: '+91', flagCode: 'in' }, // India
+    { code: '+1', flagCode: 'us' },  // USA
+    { code: '+44', flagCode: 'gb' }, // UK
+    { code: '+61', flagCode: 'au' }, // Australia
+    { code: '+86', flagCode: 'cn' }, // China
+    { code: '+81', flagCode: 'jp' }, // Japan
+    { code: '+49', flagCode: 'de' }, // Germany
+    { code: '+33', flagCode: 'fr' }, // France
+    { code: '+39', flagCode: 'it' }, // Italy
+    { code: '+34', flagCode: 'es' }, // Spain
+    { code: '+55', flagCode: 'br' }, // Brazil
+    { code: '+52', flagCode: 'mx' }, // Mexico
+    { code: '+82', flagCode: 'kr' }, // South Korea
+    { code: '+65', flagCode: 'sg' }, // Singapore
+    { code: '+60', flagCode: 'my' }, // Malaysia
+    { code: '+31', flagCode: 'nl' }, // Netherlands
+    { code: '+46', flagCode: 'se' }, // Sweden
+    { code: '+47', flagCode: 'no' }, // Norway
+    { code: '+45', flagCode: 'dk' }, // Denmark
+    { code: '+358', flagCode: 'fi' }, // Finland
+    { code: '+41', flagCode: 'ch' }, // Switzerland
+    { code: '+32', flagCode: 'be' }, // Belgium
+    { code: '+351', flagCode: 'pt' }, // Portugal
+    { code: '+30', flagCode: 'gr' }, // Greece
+    { code: '+27', flagCode: 'za' }, // South Africa
   ];
 
   // Get current selected country
@@ -207,49 +209,56 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
                   </div>
                 </div>
 
-                {/* Mobile Number with country code */}
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Mobile Number <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex rounded-xl overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-200 transition-all bg-white">
-                    <div className="flex items-center gap-2 bg-slate-50 px-3 border-r border-slate-200">
-                      {/* Country flag */}
-                      {selectedCountry && (
-                        <img
-                          src={`https://flagcdn.com/w20/${selectedCountry.flagCode}.png`}
-                          srcSet={`https://flagcdn.com/w40/${selectedCountry.flagCode}.png 2x`}
-                          width="20"
-                          height="15"
-                          alt={`${selectedCountry.country} flag`}
-                          className="rounded-sm shadow-sm"
-                          style={{ width: '20px', height: '15px', objectFit: 'cover' }}
-                        />
-                      )}
-                      <select
-                        name="countryCode"
-                        value={formData.countryCode}
-                        onChange={handleInputChange}
-                        className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer py-3 pr-2 min-w-[70px]"
-                      >
-                        {countryOptions.map(opt => (
-                          <option key={opt.code} value={opt.code}>
-                            {opt.country} ({opt.code})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <input
-                      type="tel"
-                      name="mobileNumber"
-                      required
-                      value={formData.mobileNumber}
-                      onChange={handleInputChange}
-                      placeholder="Enter mobile number"
-                      className="w-full px-4 py-3 text-sm focus:outline-none bg-white"
-                    />
-                  </div>
-                </div>
+          {/* Mobile Number with country code */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                 Mobile Number <span className="text-red-500">*</span>
+            </label>
+            <div className="flex rounded-xl overflow-hidden border border-slate-200 focus-within:ring-2 focus-within:ring-blue-200 transition-all bg-white">
+              <div className="flex items-center gap-2 bg-slate-50 px-3 border-r border-slate-200 relative">
+               {/* Country flag */}
+               {selectedCountry && (
+              <img
+                src={`https://flagcdn.com/w20/${selectedCountry.flagCode}.png`}
+                srcSet={`https://flagcdn.com/w40/${selectedCountry.flagCode}.png 2x`}
+                width="20"
+                height="15"
+               alt={`Flag for code ${selectedCountry.code}`}
+               className="rounded-sm shadow-sm flex-shrink-0"
+               style={{ width: '20px', height: '15px', objectFit: 'cover' }}
+               />
+              )}
+             <select
+                name="countryCode"
+                value={formData.countryCode}
+               onChange={handleInputChange}
+               className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer py-3 pr-6 appearance-none"
+               style={{ 
+                 backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                 backgroundPosition: 'right 0px center',
+                 backgroundSize: '16px',
+                 paddingRight: '20px'
+                }}
+                >
+              {countryOptions.map(opt => (
+               <option key={opt.code} value={opt.code}>
+                 {opt.code}
+               </option>
+               ))}
+              </select>
+           </div>
+          <input
+            type="tel"
+            name="mobileNumber"
+            required
+            value={formData.mobileNumber}
+           onChange={handleInputChange}
+           placeholder="Enter mobile number"
+           className="w-full px-4 py-3 text-sm focus:outline-none bg-white"
+           />
+         </div>
+  </div>
 
                 {/* Date of Birth */}
                 <div>
@@ -267,7 +276,6 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
                       className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-slate-700"
                     />
                   </div>
-                  <p className="text-xs text-slate-400 mt-1.5 ml-1">Format: DD/MM/YYYY (shown as YYYY-MM-DD)</p>
                 </div>
               </div>
 
@@ -278,7 +286,7 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
                   <span className="block text-sm font-semibold text-slate-700 mb-1 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Age
                   </span>
-                  <div className="text-5xl font-extrabold text-slate-800 my-2 tracking-tight">
+                  <div className="text-5xl font-medium text-slate-800 my-2 tracking-tight">
                     {displayAge}
                   </div>
                   <span className="text-sm font-medium text-slate-400 bg-white/60 px-2 py-0.5 rounded-full">Years</span>
@@ -332,6 +340,7 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
 
           {/* FOOTER BUTTON */}
           <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/40 flex justify-end">
+          <Link to="/candidate/registration/professional">
             <button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm tracking-wide group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -339,6 +348,7 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
               Continue
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
+            </Link>
           </div>
         </form>
       </div>

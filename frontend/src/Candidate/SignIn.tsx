@@ -64,7 +64,7 @@ if (activeTab === 'signup') {
       if (data.user.email === ADMIN_EMAIL) {
         navigate('/settings'); 
       } else {
-        navigate('/exportdata'); 
+        navigate('/candidate/registration/basic'); 
       }
     }
   }

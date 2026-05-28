@@ -163,7 +163,7 @@ export default function Home() {
           {/* Auth buttons */}
           <div className="flex items-center gap-2.5">
             <Link
-              to="/signup"
+              to="/signin"
               className="hidden sm:inline-flex px-4 py-2 rounded-xl text-[14px] font-semibold text-[#0b3d6b] border border-[#0b3d6b]/30 hover:border-[#0b3d6b] hover:bg-[#0b3d6b]/5 transition-all"
             >
               Sign Up

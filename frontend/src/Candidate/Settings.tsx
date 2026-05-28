@@ -5,9 +5,6 @@ import {
   IoNotificationsOutline,
   IoShieldOutline,
   IoLockClosedOutline,
-  IoMenuOutline,
-  IoPersonCircleOutline,
-  IoLogOutOutline,
   IoChevronDownOutline
 } from 'react-icons/io5';
 import { MdOutlineBackup } from 'react-icons/md';
@@ -26,7 +23,6 @@ interface SettingsData {
   itemsPerPage: number;
 }
 
-// Separate Menu Item Component
 interface MenuItemProps {
   id: TabType;
   label: string;
@@ -35,19 +31,26 @@ interface MenuItemProps {
   onClick: () => void;
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({  label, icon, isActive, onClick }) => {
+const MenuItem: React.FC<MenuItemProps> = ({ label, icon, isActive, onClick }) => {
   return (
     <button
-      className={`sidebar-item ${isActive ? 'active' : ''}`}
+      className={`
+        w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left
+        text-sm font-medium transition-all duration-200
+        ${isActive 
+          ? 'bg-gradient-to-r from-blue-50 to-transparent text-blue-600 font-semibold border-l-4 border-blue-600' 
+          : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+        }
+      `}
       onClick={onClick}
     >
-      <span className="sidebar-icon">{icon}</span>
-      <span className="sidebar-label">{label}</span>
+      <span className="w-5 h-5 flex items-center justify-center flex-shrink-0">{icon}</span>
+      <span className="flex-1">{label}</span>
     </button>
   );
 };
 
-// Two Column Form Row Component - Labels on left, Inputs on right
+// Updated FormRow - Labels on left, inputs on right (2-column layout)
 interface FormRowProps {
   label: string;
   required?: boolean;
@@ -56,21 +59,22 @@ interface FormRowProps {
 
 const FormRow: React.FC<FormRowProps> = ({ label, required = false, children }) => {
   return (
-    <div className="form-row">
-      <div className="form-label-col">
-        <label className="form-label">
+    <div className="flex flex-col md:flex-row items-start gap-4 mb-6 w-full">
+      {/* Label Column - Left side (fixed width) */}
+      <div className="md:w-48 lg:w-56 pt-2">
+        <label className="text-sm font-medium text-gray-700">
           {label}
-          {required && <span className="required-star">*</span>}
+          {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       </div>
-      <div className="form-input-col">
+      {/* Input Column - Right side (takes remaining space) */}
+      <div className="flex-1 w-full">
         {children}
       </div>
     </div>
   );
 };
 
-// Form Input Component
 interface FormInputProps {
   value: string | number;
   onChange: (value: string | number) => void;
@@ -87,7 +91,9 @@ const FormInput: React.FC<FormInputProps> = ({
   return (
     <input
       type={type}
-      className="form-control"
+      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-800 
+                 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 
+                 transition-all duration-200 placeholder:text-gray-400 bg-white"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
@@ -95,7 +101,6 @@ const FormInput: React.FC<FormInputProps> = ({
   );
 };
 
-// Select Input Component with Chevron Icon
 interface SelectOption {
   value: string | number;
   label: string;
@@ -111,9 +116,11 @@ const FormSelect: React.FC<FormSelectProps> = ({ value, options, onChange }) => 
   const [isOpen, setIsOpen] = useState(false);
   
   return (
-    <div className="select-wrapper">
+    <div className="relative w-full">
       <select
-        className="form-control"
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-800 
+                   focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 
+                   appearance-none cursor-pointer bg-white pr-10"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setIsOpen(true)}
@@ -127,98 +134,14 @@ const FormSelect: React.FC<FormSelectProps> = ({ value, options, onChange }) => 
       </select>
       <IoChevronDownOutline 
         size={16} 
-        className={`select-chevron ${isOpen ? 'open' : ''}`} 
+        className={`absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
       />
     </div>
   );
 };
 
-// Navbar Component
-interface NavbarProps {
-  onMenuClick: () => void;
-  isSidebarOpen: boolean;
-}
-
-const Navbar: React.FC<NavbarProps> = ({ onMenuClick }) => {
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [notificationCount] = useState(3);
-
-  const handleLogout = () => {
-    console.log('Logging out...');
-  };
-
-  return (
-    <nav className="settings-navbar">
-      <div className="navbar-left">
-        <button 
-          className="navbar-menu-btn" 
-          onClick={onMenuClick}
-          aria-label="Toggle sidebar"
-        >
-          <IoMenuOutline size={24} />
-        </button>
-        <div className="navbar-logo">
-          <span className="logo-text">Workforce</span>
-        </div>
-      </div>
-
-      <div className="navbar-right">
-        <button className="navbar-notification-btn" aria-label="Notifications">
-          <IoNotificationsOutline size={22} />
-          {notificationCount > 0 && (
-            <span className="notification-badge">{notificationCount}</span>
-          )}
-        </button>
-
-        <div className="navbar-profile">
-          <button 
-            className="profile-trigger"
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-            aria-label="Profile menu"
-          >
-            <div className="profile-image">
-              <IoPersonCircleOutline size={32} />
-            </div>
-            <span className="profile-name">John Doe</span>
-            <IoChevronDownOutline size={16} className={`dropdown-arrow ${isProfileOpen ? 'open' : ''}`} />
-          </button>
-
-          {isProfileOpen && (
-            <div className="profile-dropdown">
-              <div className="dropdown-header">
-                <div className="dropdown-profile-image">
-                  <IoPersonCircleOutline size={40} />
-                </div>
-                <div className="dropdown-user-info">
-                  <span className="user-name">John Doe</span>
-                  <span className="user-email">john.doe@workforce.com</span>
-                </div>
-              </div>
-              <div className="dropdown-divider"></div>
-              <button className="dropdown-item" onClick={() => console.log('Profile clicked')}>
-                <IoPersonCircleOutline size={18} />
-                <span>Your Profile</span>
-              </button>
-              <button className="dropdown-item" onClick={() => console.log('Settings clicked')}>
-                <IoSettingsOutline size={18} />
-                <span>Account Settings</span>
-              </button>
-              <div className="dropdown-divider"></div>
-              <button className="dropdown-item logout" onClick={handleLogout}>
-                <IoLogOutOutline size={18} />
-                <span>Logout</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </nav>
-  );
-};
-
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [settings, setSettings] = useState<SettingsData>({
     companyName: 'Workforce Hiring Solutions',
     companyEmail: 'info@workforcehs.com',
@@ -239,21 +162,19 @@ const SettingsPage: React.FC = () => {
   const handleSave = async () => {
     setIsSaving(true);
     setSaveMessage('');
-    
     await new Promise(resolve => setTimeout(resolve, 800));
-    
     setSaveMessage('Settings saved successfully!');
     setIsSaving(false);
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
   const menuItems = [
-    { id: 'general' as TabType, label: 'General Settings', icon: <IoSettingsOutline size={20} /> },
-    { id: 'email' as TabType, label: 'Email Settings', icon: <IoMailOutline size={20} /> },
-    { id: 'notification' as TabType, label: 'Notification Settings', icon: <IoNotificationsOutline size={20} /> },
-    { id: 'security' as TabType, label: 'Security Settings', icon: <IoShieldOutline size={20} /> },
-    { id: 'privacy' as TabType, label: 'Privacy Settings', icon: <IoLockClosedOutline size={20} /> },
-    { id: 'backup' as TabType, label: 'Backup Settings', icon: <MdOutlineBackup size={20} /> }
+    { id: 'general' as TabType, label: 'General Settings', icon: <IoSettingsOutline size={18} /> },
+    { id: 'email' as TabType, label: 'Email Settings', icon: <IoMailOutline size={18} /> },
+    { id: 'notification' as TabType, label: 'Notification Settings', icon: <IoNotificationsOutline size={18} /> },
+    { id: 'security' as TabType, label: 'Security Settings', icon: <IoShieldOutline size={18} /> },
+    { id: 'privacy' as TabType, label: 'Privacy Settings', icon: <IoLockClosedOutline size={18} /> },
+    { id: 'backup' as TabType, label: 'Backup Settings', icon: <MdOutlineBackup size={18} /> }
   ];
 
   const timeZoneOptions = [
@@ -283,112 +204,144 @@ const SettingsPage: React.FC = () => {
   ];
 
   const itemsPerPageOptions = [
-    { value: 5, label: '5' },
-    { value: 10, label: '10' },
-    { value: 25, label: '25' },
-    { value: 50, label: '50' },
-    { value: 100, label: '100' }
+    { value: 5, label: '5 items' },
+    { value: 10, label: '10 items' },
+    { value: 25, label: '25 items' },
+    { value: 50, label: '50 items' },
+    { value: 100, label: '100 items' }
   ];
 
   return (
-    <div className="settings-page">
-      <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} isSidebarOpen={isSidebarOpen} />
-       <div className="sidebar-header">
-            <h1>Settings</h1>
-            <p>Application settings and preferences</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="px-4 py-4 sticky top-0 z-10">
+        <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+        <p className="text-xs text-gray-500 mt-0.5">Application settings and preferences</p>
+      </div>
+
+      {/* Mobile Tab Navigation - Horizontal Scroll */}
+      <div className="lg:hidden bg-white border-b border-gray-100 overflow-x-auto sticky top-[73px] z-10">
+        <div className="flex px-2 py-2 gap-1 min-w-max">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                activeTab === item.id
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Layout - Stacked on mobile, Side-by-side on desktop */}
+      <div className="flex flex-col lg:flex-row lg:gap-4 p-4">
+        
+        {/* Sidebar - Full height on desktop */}
+        <aside className="hidden lg:block lg:w-72 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden lg:sticky lg:top-[calc(73px+1rem)] lg:h-[calc(100vh-100px)]">
+          <div className="flex flex-col h-full">
+            
+            <nav className="flex-1 p-2 overflow-y-auto space-y-3 ">
+              {menuItems.map((item) => (
+                <MenuItem
+                  key={item.id}
+                  id={item.id}
+                  label={item.label}
+                  icon={item.icon}
+                  isActive={activeTab === item.id}
+                  onClick={() => setActiveTab(item.id)}
+                />
+              ))}
+            </nav>
           </div>
-      <div className="settings-layout">
-        <aside className={`settings-sidebar ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
-          <nav className="sidebar-nav">
-            {menuItems.map((item) => (
-              <MenuItem
-                key={item.id}
-                id={item.id}
-                label={item.label}
-                icon={item.icon}
-                isActive={activeTab === item.id}
-                onClick={() => setActiveTab(item.id)}
-              />
-            ))}
-          </nav>
         </aside>
 
-        <main className="settings-main">
-          <div className="settings-content-wrapper">
+        {/* Main Content - Full width on mobile */}
+        <main className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 sm:p-6">
             {activeTab === 'general' && (
-              <div className="settings-form">
-                <div className="form-section">
-                  <h2>General Settings</h2>
-                  
-                  <div className="form-container">
-                    <FormRow label="Company Name">
-                      <FormInput
-                        value={settings.companyName}
-                        onChange={(value) => handleInputChange('companyName', value)}
-                        placeholder="Enter company name"
-                      />
-                    </FormRow>
+              <div>
+                <div className="mb-6 pb-3 border-b border-gray-100">
+                  <h2 className="text-lg font-semibold text-gray-900">General Settings</h2>
+                </div>
+                
+                <div>
+                  <FormRow label="Company Name" required>
+                    <FormInput
+                      value={settings.companyName}
+                      onChange={(value) => handleInputChange('companyName', value)}
+                      placeholder="Enter company name"
+                    />
+                  </FormRow>
 
-                    <FormRow label="Company Email">
-                      <FormInput
-                        type="email"
-                        value={settings.companyEmail}
-                        onChange={(value) => handleInputChange('companyEmail', value)}
-                        placeholder="company@example.com"
-                      />
-                    </FormRow>
+                  <FormRow label="Company Email" required>
+                    <FormInput
+                      type="email"
+                      value={settings.companyEmail}
+                      onChange={(value) => handleInputChange('companyEmail', value)}
+                      placeholder="company@example.com"
+                    />
+                  </FormRow>
 
-                    <FormRow label="Company Phone">
-                      <FormInput
-                        type="tel"
-                        value={settings.companyPhone}
-                        onChange={(value) => handleInputChange('companyPhone', value)}
-                        placeholder="+1 234 567 8900"
-                      />
-                    </FormRow>
+                  <FormRow label="Company Phone" required>
+                    <FormInput
+                      type="tel"
+                      value={settings.companyPhone}
+                      onChange={(value) => handleInputChange('companyPhone', value)}
+                      placeholder="+1 234 567 8900"
+                    />
+                  </FormRow>
 
-                    <FormRow label="Time Zone">
-                      <FormSelect
-                        value={settings.timeZone}
-                        options={timeZoneOptions}
-                        onChange={(value) => handleInputChange('timeZone', value as string)}
-                      />
-                    </FormRow>
+                  <FormRow label="Time Zone">
+                    <FormSelect
+                      value={settings.timeZone}
+                      options={timeZoneOptions}
+                      onChange={(value) => handleInputChange('timeZone', value as string)}
+                    />
+                  </FormRow>
 
-                    <FormRow label="Date Format">
-                      <FormSelect
-                        value={settings.dateFormat}
-                        options={dateFormatOptions}
-                        onChange={(value) => handleInputChange('dateFormat', value as string)}
-                      />
-                    </FormRow>
+                  <FormRow label="Date Format">
+                    <FormSelect
+                      value={settings.dateFormat}
+                      options={dateFormatOptions}
+                      onChange={(value) => handleInputChange('dateFormat', value as string)}
+                    />
+                  </FormRow>
 
-                    <FormRow label="Currency">
-                      <FormSelect
-                        value={settings.currency}
-                        options={currencyOptions}
-                        onChange={(value) => handleInputChange('currency', value as string)}
-                      />
-                    </FormRow>
+                  <FormRow label="Currency">
+                    <FormSelect
+                      value={settings.currency}
+                      options={currencyOptions}
+                      onChange={(value) => handleInputChange('currency', value as string)}
+                    />
+                  </FormRow>
 
-                    <FormRow label="Items Per Page">
-                      <FormSelect
-                        value={settings.itemsPerPage}
-                        options={itemsPerPageOptions}
-                        onChange={(value) => handleInputChange('itemsPerPage', value as number)}
-                      />
-                    </FormRow>
-                  </div>
+                  <FormRow label="Items Per Page">
+                    <FormSelect
+                      value={settings.itemsPerPage}
+                      options={itemsPerPageOptions}
+                      onChange={(value) => handleInputChange('itemsPerPage', value as number)}
+                    />
+                  </FormRow>
                 </div>
 
-                <div className="form-actions">
+                <div className="flex flex-col-reverse sm:flex-row justify-end items-center gap-3 mt-8 pt-6 border-t border-gray-100">
                   {saveMessage && (
-                    <div className="save-message success">
+                    <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg text-sm order-1 sm:order-none">
                       <BiCheck size={16} />
-                      {saveMessage}
+                      <span>{saveMessage}</span>
                     </div>
                   )}
-                  <button className="save-btn" onClick={handleSave} disabled={isSaving}>
+                  <button 
+                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                  >
                     <FiSave size={16} />
                     {isSaving ? 'Saving...' : 'Save Changes'}
                   </button>
@@ -397,13 +350,17 @@ const SettingsPage: React.FC = () => {
             )}
 
             {activeTab !== 'general' && (
-              <div className="placeholder-content">
-                <div className="placeholder-icon">
+              <div className="text-center py-12 px-4">
+                <div className="text-5xl mb-4 text-blue-500">
                   {menuItems.find(item => item.id === activeTab)?.icon}
                 </div>
-                <h2>{menuItems.find(item => item.id === activeTab)?.label}</h2>
-                <p>Configure your {activeTab} preferences here.</p>
-                <div className="coming-soon">Coming Soon</div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                  {menuItems.find(item => item.id === activeTab)?.label}
+                </h2>
+                <p className="text-sm text-gray-500 mb-5">Configure your {activeTab} preferences here.</p>
+                <div className="inline-block px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
+                  Coming Soon
+                </div>
               </div>
             )}
           </div>
