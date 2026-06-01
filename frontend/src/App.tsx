@@ -1,5 +1,7 @@
+// src/App.tsx
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import BasicInformation from './Candidate/BasicInformation';
 import ProfessionalInfo from './Candidate/ProfessionalInfo';
 import SkillsExperience from './Candidate/SkillsExperience';
@@ -144,27 +146,53 @@ function RegistrationFlow() {
 function App() {
   return (
     <BrowserRouter>
+      {/* Toast notifications container */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      
       <Routes>
         {/* Public Routes - Everyone can access */}
         <Route path="/signin" element={<SignIn />} />
         <Route path="/home" element={<Home />} />
-        
         
         {/* Registration Flow - Public access */}
         <Route path="/candidate/registration/*" element={<RegistrationFlow />} />
         <Route path="/candidate/profile" element={<ProfileCreated />} />
         
         {/* Dashboard Routes - Now public without authentication */}
-         <Route element={<DashboardLayout />}>
-        <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/settings" element={<SettingsPage />} />       
-        <Route path="/exportdata" element={<ExportData />} />
-        <Route path="/admin/reports" element={<Reports />} />
-        <Route path="/admin/fields" element={<Fields />} />
-        <Route path="/admin/skills" element={<Skills />} />
-        <Route path="/admin/users" element={<Users />} />
-        <Route path="/admin/salary-insights" element={<SalaryInsights />} />
+        <Route element={<DashboardLayout />}>
+          <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/settings" element={<SettingsPage />} />       
+          <Route path="/exportdata" element={<ExportData />} />
+          <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/admin/fields" element={<Fields />} />
+          <Route path="/admin/skills" element={<Skills />} />
+          <Route path="/admin/users" element={<Users />} />
+        
+          <Route path="/admin/salary-insights" element={<SalaryInsights />} />
         </Route>
         
         {/* Redirects */}
