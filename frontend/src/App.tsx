@@ -21,11 +21,24 @@ import Fields from './Admin/Fields';
 import Skills from './Admin/Skills';
 import Users from './Admin/Users';
 import Navbar from './components/Navbar';
-import type { BasicInfoData, ProfessionalInfoData } from './Candidate/types';
-import type { CandidateFormData } from './types/candidate';
+import { supabase } from './supabaseClient';
+import { saveCandidate } from './Candidate/candidateService';
+
+// නිවැරදි:
+import type { BasicInfoData, ProfessionalInfoData, CandidateFormData } from './types/candidate';
+
 import './App.css';
 
 const initialFormData: CandidateFormData = {
+  fullName: '',
+  email: '',
+  mobileNumber: '',
+  dob: '',           // ← dateOfBirth → dob
+  linkedin: '',      // ← linkedInProfile → linkedin
+  age: '--',         // ← add this
+
+  interestedField: '',
+  yearsOfExperience: '',
   skills: [],
   status: '',
   availability: '',
@@ -63,16 +76,34 @@ function RegistrationFlow() {
     navigate('/candidate/registration/upload');
   };
 
-  const handleFinalSubmit = () => {
-    const completeProfile = { 
-      basicData, 
-      professionalData, 
-      ...formData 
-    };
-    console.log('Complete profile:', completeProfile);
-    alert('Registration completed! Redirecting to dashboard...');
-    navigate('/candidate/dashboard');
-  };
+const handleFinalSubmit = async () => {
+  // formData.cv check
+  if (!formData.cv) {
+    alert('CV required');
+    return;
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    navigate('/signin');
+    return;
+  }
+
+  try {
+    await saveCandidate(
+      {
+        basicData: basicData!,
+        professionalData: professionalData!,
+        formData,
+        cvFile: formData.cv,
+      },
+      user.id
+    );
+    navigate('/candidate/profile'); // Success page
+  } catch (err: any) {
+    alert(`Error: ${err.message}`);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -196,7 +227,7 @@ function App() {
         </Route>
         
         {/* Redirects */}
-        <Route path="/" element={<Navigate to="/signin" replace />} />
+        <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/candidate" element={<Navigate to="/candidate/registration/basic" replace />} />
         <Route path="*" element={<Navigate to="/candidate/registration/basic" replace />} />
       </Routes>

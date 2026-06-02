@@ -5,6 +5,14 @@
 // ============================================
 
 export interface CandidateFormData {
+  fullName: string;
+  email: string;
+  mobileNumber: string;
+  dob: string;
+  linkedin: string;
+  age: string | number;
+  interestedField: string;
+  yearsOfExperience: string;
   skills: string[];
   status?: string;
   availability?: string;
@@ -12,9 +20,32 @@ export interface CandidateFormData {
   salaryRange?: string;
   cv?: File | null;
 }
+// src/types/candidate.ts - TOP හි add කරන්න
+export interface BasicInfoData {
+  fullName: string;
+  email: string;
+  countryCode: string;
+  mobileNumber: string;
+  dob: string;
+  linkedin: string;
+  age: string | number;
+}
+
+export interface ProfessionalInfoData {
+  currentRole?: string;
+  company?: string;
+  experience?: number;
+  noticePeriod?: string;
+  currentCtc?: string;
+  expectedCtc?: string;
+  primarySkills?: string[];
+  jobType?: string;
+  interestedField: string;
+  yearsOfExperience: string;
+}
 
 // Import BasicInfoData from Candidate types
-import type { BasicInfoData } from '../Candidate/types';
+
 
 export interface FormComponentProps {
   formData: CandidateFormData;
@@ -231,6 +262,14 @@ export const formDataToApiData = (formData: CandidateFormData, basicData?: any):
 // Convert API data to form data
 export const apiDataToFormData = (candidate: Candidate): CandidateFormData => {
   return {
+    fullName: candidate.name || '',
+    email: candidate.email || '',
+    mobileNumber: candidate.phone || '',
+    dob: '',
+    linkedin: '',
+    age: '--',
+    interestedField: candidate.field || '',
+    yearsOfExperience: candidate.experience || '',
     skills: candidate.skills || [],
     status: candidate.status,
     availability: candidate.availability,
@@ -260,7 +299,16 @@ export const validateCandidateForm = (data: Partial<Candidate>): Record<string, 
 };
 
 // Default values
+// Default values - missing fields add කරන්න
 export const defaultCandidateFormData: CandidateFormData = {
+  fullName: '',
+  email: '',
+  mobileNumber: '',
+  dob: '',
+  linkedin: '',
+  age: '--',
+  interestedField: '',
+  yearsOfExperience: '',
   skills: [],
   status: 'Actively Looking',
   availability: 'Immediate',

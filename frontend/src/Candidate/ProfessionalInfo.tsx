@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Briefcase, Clock, ArrowLeft, ArrowRight, Check, ChevronDown } from 'lucide-react';
-import type { ProfessionalInfoData } from './types';
+// නිවැරදි:
+import type { BasicInfoData, ProfessionalInfoData } from '../types/candidate';
 import manImage from '../assets/OIP.webp';
 
 interface ProfessionalInfoProps {
@@ -220,15 +221,13 @@ export default function ProfessionalInfo({ onNext, onBack, initialData }: Profes
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
               Back
             </button>
-            <Link to="/candidate/registration/skills">
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm tracking-wide group focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl..."
             >
               Continue
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
-            </Link>
           </div>
         </form>
       </div>
