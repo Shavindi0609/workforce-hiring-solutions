@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+// src/Admin/Reports.tsx
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   BriefcaseBusiness,
   CalendarDays,
@@ -7,14 +8,17 @@ import {
   FileText,
   Users,
 } from 'lucide-react';
-import {
-  recentReports,
-  reportDefinitions,
-  summaryMetrics,
-  type ReportFormat,
-} from '../data/reportsData';
+import { useReports } from '../hooks/useReports';
+import type { ReportFormat } from '../types/report';
 
-const summaryIcons: Record<string, ReactNode> = {
+const reportDefinitions = [
+  { name: 'Candidate Summary', description: 'Overview of candidate statistics and metrics' },
+  { name: 'Salary Insights', description: 'Salary distribution by field and experience' },
+  { name: 'Field Distribution', description: 'Candidates grouped by their interested fields' },
+  { name: 'Status Report', description: 'Candidates by status and availability' },
+];
+
+const summaryIcons: Record<string, React.ReactNode> = {
   blue: <Users size={26} />,
   green: <Users size={26} />,
   orange: <BriefcaseBusiness size={26} />,
@@ -23,15 +27,32 @@ const summaryIcons: Record<string, ReactNode> = {
 
 function Reports() {
   const [reportType, setReportType] = useState<string>('Select Report');
-  const [fromDate, setFromDate] = useState<string>('2026-05-20');
-  const [toDate, setToDate] = useState<string>('2026-06-20');
-  const [generatedReports, setGeneratedReports] = useState(recentReports);
+  const [fromDate, setFromDate] = useState<string>(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  });
+  const [toDate, setToDate] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const [fieldFilter, setFieldFilter] = useState<string>('All Fields');
+  const [statusFilter, setStatusFilter] = useState<string>('All Status');
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>('All Availability');
+  const [isGenerating, setIsGenerating] = useState(false);
 
+  const { 
+    generatedReports, 
+    summaryMetrics, 
+    loading, 
+    generateReportData, 
+    downloadReport,
+    refetch 
+  } = useReports();
+
+  // Prevent date validation from causing re-renders
   useEffect(() => {
     if (fromDate && toDate && toDate < fromDate) {
-      const timeoutId = window.setTimeout(() => setToDate(''), 0);
-
-      return () => window.clearTimeout(timeoutId);
+      setToDate(fromDate);
     }
   }, [fromDate, toDate]);
 
@@ -41,29 +62,68 @@ function Reports() {
     return `${from} - ${to}`;
   }, [fromDate, toDate]);
 
-  const handleDownload = (reportName: string, format: ReportFormat) => {
-    downloadMockReport(reportName, format);
-  };
+  const handleDownload = useCallback(async (reportName: string, format: ReportFormat) => {
+    if (isGenerating) return;
+    
+    setIsGenerating(true);
+    const filters = {
+      reportType,
+      fromDate,
+      toDate,
+      field: fieldFilter,
+      status: statusFilter,
+      availability: availabilityFilter
+    };
+    
+    try {
+      await generateReportData(reportName, format, filters);
+      downloadReport(reportName, format);
+    } catch (error) {
+      console.error('Download error:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, downloadReport, isGenerating]);
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = useCallback(async () => {
+    if (isGenerating) return;
+    
+    setIsGenerating(true);
     const selectedReportName = reportType === 'Select Report' ? reportDefinitions[0].name : reportType;
+    const filters = {
+      reportType: selectedReportName,
+      fromDate,
+      toDate,
+      field: fieldFilter,
+      status: statusFilter,
+      availability: availabilityFilter
+    };
+    
+    try {
+      await generateReportData(selectedReportName, 'PDF', filters);
+      await refetch();
+    } catch (error) {
+      console.error('Generate error:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, refetch, isGenerating]);
 
-    setGeneratedReports((reports) => [
-      {
-        name: selectedReportName,
-        type: 'PDF',
-        generatedOn: new Date().toLocaleString('en-US', {
-          month: 'short',
-          day: '2-digit',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-        }),
-        generatedBy: 'Admin',
-      },
-      ...reports,
-    ]);
-  };
+  // Prepare summary metrics for display
+  const summaryMetricsList = [
+    { label: 'Total Candidates', value: summaryMetrics.totalCandidates.toLocaleString(), tone: 'blue' },
+    { label: 'Actively Looking', value: summaryMetrics.activelyLooking.toLocaleString(), tone: 'green' },
+    { label: 'Open to Opportunities', value: summaryMetrics.openToOpportunities.toLocaleString(), tone: 'orange' },
+    { label: 'Available Immediately', value: summaryMetrics.availableImmediate.toLocaleString(), tone: 'purple' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <main className="assigned-page reports-page">
@@ -76,12 +136,27 @@ function Reports() {
         <FilterSelect
           label="Report Type"
           value={reportType}
-          options={['Select Report', 'Candidate Summary', 'Salary Insights']}
+          options={['Select Report', 'Candidate Summary', 'Salary Insights', 'Field Distribution', 'Status Report']}
           onChange={setReportType}
         />
-        <FilterSelect label="Field" value="All Fields" options={['All Fields', 'Engineering', 'Design', 'Marketing']} />
-        <FilterSelect label="Status" value="All Status" options={['All Status', 'Active', 'Shortlisted', 'Rejected']} />
-        <FilterSelect label="Availability" value="All Availability" options={['All Availability', 'Immediate', 'Two Weeks', 'One Month']} />
+        <FilterSelect 
+          label="Field" 
+          value={fieldFilter} 
+          options={['All Fields', 'Web Development', 'UI/UX Design', 'Data Science', 'Digital Marketing', 'Mobile Development', 'DevOps', 'AI / ML']}
+          onChange={setFieldFilter}
+        />
+        <FilterSelect 
+          label="Status" 
+          value={statusFilter} 
+          options={['All Status', 'Actively Looking', 'Open to Opportunities']}
+          onChange={setStatusFilter}
+        />
+        <FilterSelect 
+          label="Availability" 
+          value={availabilityFilter} 
+          options={['All Availability', 'Immediate', '2 Weeks', '1 Month', '2 Months', '3 Months']}
+          onChange={setAvailabilityFilter}
+        />
         <div className="assigned-date-filter" aria-label={dateRangeLabel}>
           <CalendarDays size={15} />
           <input
@@ -99,14 +174,19 @@ function Reports() {
             onChange={(event) => setToDate(event.target.value)}
           />
         </div>
-        <button className="assigned-primary-action" type="button" onClick={handleGenerateReport}>
+        <button 
+          className="assigned-primary-action" 
+          type="button" 
+          onClick={handleGenerateReport}
+          disabled={isGenerating}
+        >
           <FileText size={14} />
-          Generate Report
+          {isGenerating ? 'Generating...' : 'Generate Report'}
         </button>
       </section>
 
       <section className="reports-summary-grid">
-        {summaryMetrics.map((metric) => (
+        {summaryMetricsList.map((metric) => (
           <article className={`reports-summary-card ${metric.tone}`} key={metric.label}>
             <div className="reports-summary-icon">{summaryIcons[metric.tone] ?? <Users size={26} />}</div>
             <div>
@@ -132,11 +212,19 @@ function Reports() {
                 </div>
               </div>
               <div className="reports-actions">
-                <button type="button" onClick={() => handleDownload(report.name, 'PDF')}>
+                <button 
+                  type="button" 
+                  onClick={() => handleDownload(report.name, 'PDF')}
+                  disabled={isGenerating}
+                >
                   <FileText size={14} />
                   PDF
                 </button>
-                <button type="button" onClick={() => handleDownload(report.name, 'Excel')}>
+                <button 
+                  type="button" 
+                  onClick={() => handleDownload(report.name, 'Excel')}
+                  disabled={isGenerating}
+                >
                   <FileSpreadsheet size={14} />
                   Excel
                 </button>
@@ -161,7 +249,7 @@ function Reports() {
             </thead>
             <tbody>
               {generatedReports.map((report) => (
-                <tr key={`${report.name}-${report.generatedOn}`}>
+                <tr key={report.id || `${report.name}-${report.generatedOn}`}>
                   <td>{report.name}</td>
                   <td>{report.type}</td>
                   <td>{report.generatedOn}</td>
@@ -171,13 +259,21 @@ function Reports() {
                       className="reports-download-icon"
                       type="button"
                       aria-label={`Download ${report.name}`}
-                      onClick={() => handleDownload(report.name, report.type as ReportFormat)}
+                      onClick={() => downloadReport(report.name, report.type)}
+                      disabled={isGenerating}
                     >
                       <Download size={16} />
                     </button>
                   </td>
                 </tr>
               ))}
+              {generatedReports.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-gray-500">
+                    No reports generated yet
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -200,35 +296,13 @@ function FilterSelect({
   return (
     <label className="assigned-filter-control">
       <span>{label}</span>
-      <select defaultValue={value} onChange={(event) => onChange?.(event.target.value)}>
+      <select value={value} onChange={(event) => onChange?.(event.target.value)}>
         {options.map((option) => (
           <option key={option}>{option}</option>
         ))}
       </select>
     </label>
   );
-}
-
-function downloadMockReport(reportName: string, format: ReportFormat) {
-  const rows = [
-    ['Report Name', 'Type', 'Generated On', 'Generated By'],
-    [reportName, format, new Date().toLocaleString(), 'Admin'],
-    ['Total Candidates', '2458', 'Actively Looking', '1245'],
-    ['Average Minimum Salary', '$72,500', 'Average Maximum Salary', '$125,300'],
-  ];
-  const csvContent = rows.map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
-  const isPdf = format === 'PDF';
-  const blob = new Blob([isPdf ? `Mock PDF Report\n\n${csvContent}` : csvContent], {
-    type: isPdf ? 'application/pdf' : 'application/vnd.ms-excel',
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${reportName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.${isPdf ? 'pdf' : 'xls'}`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
 }
 
 function formatDateLabel(value: string) {

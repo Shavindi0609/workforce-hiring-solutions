@@ -1,3 +1,4 @@
+// src/Candidate/Settings.tsx
 import React, { useState } from 'react';
 import { 
   IoSettingsOutline,
@@ -10,18 +11,9 @@ import {
 import { MdOutlineBackup } from 'react-icons/md';
 import { FiSave } from 'react-icons/fi';
 import { BiCheck } from 'react-icons/bi';
+import { useSettings } from '../hooks/useSettings';
 
 type TabType = 'general' | 'email' | 'notification' | 'security' | 'privacy' | 'backup';
-
-interface SettingsData {
-  companyName: string;
-  companyEmail: string;
-  companyPhone: string;
-  timeZone: string;
-  dateFormat: string;
-  currency: string;
-  itemsPerPage: number;
-}
 
 interface MenuItemProps {
   id: TabType;
@@ -50,7 +42,6 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, icon, isActive, onClick }) =
   );
 };
 
-// Updated FormRow - Labels on left, inputs on right (2-column layout)
 interface FormRowProps {
   label: string;
   required?: boolean;
@@ -60,14 +51,12 @@ interface FormRowProps {
 const FormRow: React.FC<FormRowProps> = ({ label, required = false, children }) => {
   return (
     <div className="flex flex-col md:flex-row items-start gap-4 mb-6 w-full">
-      {/* Label Column - Left side (fixed width) */}
       <div className="md:w-48 lg:w-56 pt-2">
         <label className="text-sm font-medium text-gray-700">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       </div>
-      {/* Input Column - Right side (takes remaining space) */}
       <div className="flex-1 w-full">
         {children}
       </div>
@@ -142,30 +131,53 @@ const FormSelect: React.FC<FormSelectProps> = ({ value, options, onChange }) => 
 
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
-  const [settings, setSettings] = useState<SettingsData>({
-    companyName: 'Workforce Hiring Solutions',
-    companyEmail: 'info@workforcehs.com',
-    companyPhone: '+1 987 654 3210',
-    timeZone: '(GMT +05:30) Asia/Kolkata',
-    dateFormat: 'DD MMM, YYYY',
-    currency: 'USD - US Dollar',
+  const { settings, loading, saving, updateSettings} = useSettings();
+  const [saveMessage, setSaveMessage] = useState('');
+  const [localSettings, setLocalSettings] = useState({
+    companyName: '',
+    companyEmail: '',
+    companyPhone: '',
+    timeZone: '',
+    dateFormat: '',
+    currency: '',
     itemsPerPage: 10
   });
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
+  // Update local settings when settings from DB load
+  React.useEffect(() => {
+    if (settings) {
+      setLocalSettings({
+        companyName: settings.company_name,
+        companyEmail: settings.company_email,
+        companyPhone: settings.company_phone,
+        timeZone: settings.time_zone,
+        dateFormat: settings.date_format,
+        currency: settings.currency,
+        itemsPerPage: settings.items_per_page
+      });
+    }
+  }, [settings]);
 
-  const handleInputChange = (field: keyof SettingsData, value: string | number) => {
-    setSettings(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof typeof localSettings, value: string | number) => {
+    setLocalSettings(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    setSaveMessage('');
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setSaveMessage('Settings saved successfully!');
-    setIsSaving(false);
-    setTimeout(() => setSaveMessage(''), 3000);
+    try {
+      await updateSettings({
+        company_name: localSettings.companyName,
+        company_email: localSettings.companyEmail,
+        company_phone: localSettings.companyPhone,
+        time_zone: localSettings.timeZone,
+        date_format: localSettings.dateFormat,
+        currency: localSettings.currency,
+        items_per_page: localSettings.itemsPerPage
+      });
+      setSaveMessage('Settings saved successfully!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
   };
 
   const menuItems = [
@@ -211,6 +223,17 @@ const SettingsPage: React.FC = () => {
     { value: 100, label: '100 items' }
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -219,7 +242,7 @@ const SettingsPage: React.FC = () => {
         <p className="text-xs text-gray-500 mt-0.5">Application settings and preferences</p>
       </div>
 
-      {/* Mobile Tab Navigation - Horizontal Scroll */}
+      {/* Mobile Tab Navigation */}
       <div className="lg:hidden bg-white border-b border-gray-100 overflow-x-auto sticky top-[73px] z-10">
         <div className="flex px-2 py-2 gap-1 min-w-max">
           {menuItems.map((item) => (
@@ -239,14 +262,13 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Layout - Stacked on mobile, Side-by-side on desktop */}
+      {/* Main Layout */}
       <div className="flex flex-col lg:flex-row lg:gap-4 p-4">
         
-        {/* Sidebar - Full height on desktop */}
+        {/* Sidebar */}
         <aside className="hidden lg:block lg:w-72 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden lg:sticky lg:top-[calc(73px+1rem)] lg:h-[calc(100vh-100px)]">
           <div className="flex flex-col h-full">
-            
-            <nav className="flex-1 p-2 overflow-y-auto space-y-3 ">
+            <nav className="flex-1 p-2 overflow-y-auto space-y-3">
               {menuItems.map((item) => (
                 <MenuItem
                   key={item.id}
@@ -261,7 +283,7 @@ const SettingsPage: React.FC = () => {
           </div>
         </aside>
 
-        {/* Main Content - Full width on mobile */}
+        {/* Main Content */}
         <main className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 sm:p-6">
             {activeTab === 'general' && (
@@ -273,7 +295,7 @@ const SettingsPage: React.FC = () => {
                 <div>
                   <FormRow label="Company Name" required>
                     <FormInput
-                      value={settings.companyName}
+                      value={localSettings.companyName}
                       onChange={(value) => handleInputChange('companyName', value)}
                       placeholder="Enter company name"
                     />
@@ -282,7 +304,7 @@ const SettingsPage: React.FC = () => {
                   <FormRow label="Company Email" required>
                     <FormInput
                       type="email"
-                      value={settings.companyEmail}
+                      value={localSettings.companyEmail}
                       onChange={(value) => handleInputChange('companyEmail', value)}
                       placeholder="company@example.com"
                     />
@@ -291,7 +313,7 @@ const SettingsPage: React.FC = () => {
                   <FormRow label="Company Phone" required>
                     <FormInput
                       type="tel"
-                      value={settings.companyPhone}
+                      value={localSettings.companyPhone}
                       onChange={(value) => handleInputChange('companyPhone', value)}
                       placeholder="+1 234 567 8900"
                     />
@@ -299,7 +321,7 @@ const SettingsPage: React.FC = () => {
 
                   <FormRow label="Time Zone">
                     <FormSelect
-                      value={settings.timeZone}
+                      value={localSettings.timeZone}
                       options={timeZoneOptions}
                       onChange={(value) => handleInputChange('timeZone', value as string)}
                     />
@@ -307,7 +329,7 @@ const SettingsPage: React.FC = () => {
 
                   <FormRow label="Date Format">
                     <FormSelect
-                      value={settings.dateFormat}
+                      value={localSettings.dateFormat}
                       options={dateFormatOptions}
                       onChange={(value) => handleInputChange('dateFormat', value as string)}
                     />
@@ -315,7 +337,7 @@ const SettingsPage: React.FC = () => {
 
                   <FormRow label="Currency">
                     <FormSelect
-                      value={settings.currency}
+                      value={localSettings.currency}
                       options={currencyOptions}
                       onChange={(value) => handleInputChange('currency', value as string)}
                     />
@@ -323,7 +345,7 @@ const SettingsPage: React.FC = () => {
 
                   <FormRow label="Items Per Page">
                     <FormSelect
-                      value={settings.itemsPerPage}
+                      value={localSettings.itemsPerPage}
                       options={itemsPerPageOptions}
                       onChange={(value) => handleInputChange('itemsPerPage', value as number)}
                     />
@@ -340,10 +362,10 @@ const SettingsPage: React.FC = () => {
                   <button 
                     className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
                     onClick={handleSave}
-                    disabled={isSaving}
+                    disabled={saving}
                   >
                     <FiSave size={16} />
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>

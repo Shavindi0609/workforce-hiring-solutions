@@ -1,8 +1,4 @@
-// src/types/candidate.ts
 
-// ============================================
-// Form Data Types (for registration flow)
-// ============================================
 
 export interface CandidateFormData {
   fullName: string;
@@ -60,50 +56,46 @@ export interface FormComponentProps {
 // ============================================
 
 export interface Candidate {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  avatar_url: string;
-  field: string;
-  experience: string;
-  status: 'Actively Looking' | 'Open to Opportunities';
-  availability: string;
-  salary_min: number;
-  salary_max: number;
-  salary_range: string;
-  joined: string;
-  created_at: string;
-  updated_at: string;
-  // Extended fields for complete profile
-  skills?: string[];
-  willing_to_contact?: boolean;
-  cv_url?: string;
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    avatar_url: string;
+    field: string; // This maps to interested_field in DB
+    experience: string; // This maps to years_of_experience in DB
+    status: 'Actively Looking' | 'Open to Opportunities';
+    availability: string;
+    salary_min: number;
+    salary_max: number;
+    salary_range: string;
+    joined: string;
+    created_at: string;
+    updated_at: string;
+    skills?: string[];
+    willing_to_contact?: boolean;
+    cv_url?: string;
 }
 
 export interface CreateCandidateDto {
-  name: string;
-  email: string;
-  phone: string;
-  field: string;
-  experience: string;
-  status: 'Actively Looking' | 'Open to Opportunities';
-  availability: string;
-  salary_min: number;
-  salary_max: number;
-  salary_range: string;
-  skills?: string[];
-  willing_to_contact?: boolean;
-  cv_url?: string;
+    name: string;
+    email: string;
+    phone: string;
+    field: string;
+    experience: string;
+    status: 'Actively Looking' | 'Open to Opportunities';
+    availability: string;
+    salary_min: number;
+    salary_max: number;
+    salary_range: string;
+    skills?: string[];
+    willing_to_contact?: boolean;
+    cv_url?: string;
 }
 
 export interface UpdateCandidateDto extends Partial<CreateCandidateDto> {
-  id?: string;
+    id?: string;
 }
 
-// ============================================
-// Combined Types (for complete candidate profile)
-// ============================================
 
 export interface CompleteCandidateProfile {
   // Basic Info

@@ -16,17 +16,17 @@ export const useCandidates = () => {
             setError(null);
             
             console.log('🔍 Fetching candidates from Supabase...');
-            console.log('Supabase object:', supabase); // Debug
             
             let query = supabase
                 .from('candidates')
                 .select('*', { count: 'exact' });
 
+            // Apply filters using correct column names
             if (filters?.search) {
-                query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,field.ilike.%${filters.search}%`);
+                query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,interested_field.ilike.%${filters.search}%`);
             }
             if (filters?.field && filters.field !== 'All Fields') {
-                query = query.eq('field', filters.field);
+                query = query.eq('interested_field', filters.field);
             }
             if (filters?.status && filters.status !== 'All') {
                 query = query.eq('status', filters.status);
@@ -39,16 +39,33 @@ export const useCandidates = () => {
 
             const { data, error: fetchError, count } = await query;
 
-            console.log('📊 Fetch result:', { 
-                dataLength: data?.length, 
-                count, 
-                error: fetchError,
-                sampleData: data?.[0] 
-            });
+            console.log('📊 Fetch result:', { dataLength: data?.length, count, error: fetchError });
 
             if (fetchError) throw fetchError;
             
-            setCandidates(data || []);
+            // Map database columns to frontend fields
+            const mappedCandidates = data?.map(c => ({
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                phone: c.phone,
+                avatar_url: c.avatar_url,
+                field: c.interested_field,
+                experience: c.years_of_experience,
+                status: c.status,
+                availability: c.availability,
+                salary_min: 0, // Not in DB, using salary_range only
+                salary_max: 0, // Not in DB, using salary_range only
+                salary_range: c.salary_range,
+                joined: c.joined,
+                created_at: c.created_at,
+                updated_at: c.updated_at,
+                skills: c.skills,
+                willing_to_contact: c.willing_to_contact,
+                cv_url: c.cv_url,
+            })) || [];
+            
+            setCandidates(mappedCandidates);
             setTotalCount(count || 0);
             
         } catch (err: any) {
@@ -65,9 +82,16 @@ export const useCandidates = () => {
             const { data, error } = await supabase
                 .from('candidates')
                 .insert([{
-                    ...candidateData,
+                    name: candidateData.name,
+                    email: candidateData.email,
+                    phone: candidateData.phone,
+                    interested_field: candidateData.field,
+                    years_of_experience: candidateData.experience,
+                    status: candidateData.status || 'Active',
+                    availability: candidateData.availability,
+                    salary_range: candidateData.salary_range,
+                    skills: candidateData.skills || [],
                     avatar_url: `https://i.pravatar.cc/150?u=${candidateData.email}`,
-                    joined: new Date().toISOString(),
                 }])
                 .select()
                 .single();
@@ -86,12 +110,22 @@ export const useCandidates = () => {
 
     const updateCandidate = async (id: string, updates: UpdateCandidateDto) => {
         try {
+            // Map the update fields to correct column names
+            const dbUpdates: any = {};
+            
+            if (updates.name !== undefined) dbUpdates.name = updates.name;
+            if (updates.email !== undefined) dbUpdates.email = updates.email;
+            if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+            if (updates.field !== undefined) dbUpdates.interested_field = updates.field;
+            if (updates.experience !== undefined) dbUpdates.years_of_experience = updates.experience;
+            if (updates.status !== undefined) dbUpdates.status = updates.status;
+            if (updates.availability !== undefined) dbUpdates.availability = updates.availability;
+            if (updates.salary_range !== undefined) dbUpdates.salary_range = updates.salary_range;
+            if (updates.skills !== undefined) dbUpdates.skills = updates.skills;
+            
             const { data, error } = await supabase
                 .from('candidates')
-                .update({
-                    ...updates,
-                    updated_at: new Date().toISOString()
-                })
+                .update(dbUpdates)
                 .eq('id', id)
                 .select()
                 .single();

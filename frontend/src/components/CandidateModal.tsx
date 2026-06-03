@@ -28,6 +28,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
         salary_min: 0,
         salary_max: 0,
         salary_range: '',
+        skills: [],
     });
     const [loading, setLoading] = useState(false);
 
@@ -44,6 +45,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                 salary_min: candidate.salary_min,
                 salary_max: candidate.salary_max,
                 salary_range: candidate.salary_range,
+                skills: candidate.skills || [],
             });
         } else {
             setFormData({
@@ -57,6 +59,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                 salary_min: 0,
                 salary_max: 0,
                 salary_range: '',
+                skills: [],
             });
         }
     }, [candidate, isOpen]);

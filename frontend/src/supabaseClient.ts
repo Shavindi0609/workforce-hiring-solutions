@@ -19,9 +19,9 @@ const testConnections = async () => {
       .select('count', { count: 'exact', head: true });
     
     if (userError) {
-      console.error('❌ Users table error:', userError.message);
+      console.error(' Users table error:', userError.message);
     } else {
-      console.log('✅ Users table connected. Count:', userCount);
+      console.log(' Users table connected. Count:', userCount);
     }
     
     // Test candidates table
@@ -42,16 +42,48 @@ const testConnections = async () => {
     
     if (fieldError) {
       console.error('❌ Fields table error:', fieldError.message);
-      console.log('💡 Tip: Run the CREATE TABLE script for fields');
     } else {
       console.log('✅ Fields table connected. Count:', fieldCount);
       if (fieldCount === 0) {
         console.log('⚠️ Fields table is empty! Please insert sample data.');
       }
     }
+    
+    // Test skills table
+    const { count: skillCount, error: skillError } = await supabase
+      .from('skills')
+      .select('count', { count: 'exact', head: true });
+    
+    if (skillError) {
+      console.error('❌ Skills table error:', skillError.message);
+      console.log('💡 Tip: Run the CREATE TABLE script for skills');
+    } else {
+      console.log('✅ Skills table connected. Count:', skillCount);
+      if (skillCount === 0) {
+        console.log('⚠️ Skills table is empty! Please insert sample data.');
+      }
+    }
+    
+    // Test dashboard data availability
+    const { count: candidatesCount } = await supabase
+      .from('candidates')
+      .select('count', { count: 'exact', head: true });
+    
+    console.log('📊 Dashboard ready. Candidates:', candidatesCount);
+    
   } catch (err) {
     console.error('Connection test failed:', err);
   }
+
+const { count: reportCount, error: reportError } = await supabase
+    .from('report_logs')
+    .select('count', { count: 'exact', head: true });
+
+if (reportError) {
+    console.error('❌ Reports table error:', reportError.message);
+} else {
+    console.log('✅ Reports table connected. Count:', reportCount);
+}
 };
 
 testConnections();

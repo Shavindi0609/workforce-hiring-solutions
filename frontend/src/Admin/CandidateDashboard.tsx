@@ -1,11 +1,9 @@
 // src/pages/CandidatesPage.tsx
 import { useState } from 'react';
-import { Search, Filter, ChevronDown, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
+import { Search, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 import { useCandidates } from '../hooks/useCandidates';
 import { CandidateModal } from '../components/CandidateModal';
-import toast from 'react-hot-toast';
 import type { Candidate, CreateCandidateDto } from '../types/candidate';
-import { useNavigate } from 'react-router-dom'; 
 
 export default function CandidatesPage() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -15,8 +13,6 @@ export default function CandidatesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
     const [modalTitle, setModalTitle] = useState('');
-
-    const navigate = useNavigate();
 
     const { 
         candidates, 
@@ -93,7 +89,6 @@ export default function CandidatesPage() {
     }
 
     return (
-        
         <div className="min-h-screen bg-gray-50 p-8">
             {/* Header Section */}
             <div className="flex justify-between items-center mb-8">
@@ -110,12 +105,6 @@ export default function CandidatesPage() {
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700"
                     >
                         <Plus size={16} /> Add Candidate
-                    </button>
-                    <button 
-                        onClick={() => navigate('/candidate/registration/basic')} 
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
-                    >
-                        + register Candidate
                     </button>
                 </div>
             </div>
@@ -199,7 +188,7 @@ export default function CandidatesPage() {
                         </tr>
                     </thead>
                     <tbody className="text-sm">
-                        {filteredCandidates.map((candidate, index) => (
+                        {filteredCandidates.map((candidate) => (
                             <tr key={candidate.id} className="border-b hover:bg-gray-50 transition-colors">
                                 <td className="p-4">
                                     <input type="checkbox" className="rounded" />
