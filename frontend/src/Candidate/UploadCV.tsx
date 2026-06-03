@@ -2,7 +2,9 @@ import { useState, useRef } from 'react';
 import type { FormEvent, DragEvent } from 'react';
 import { ArrowLeft, Check, FileText, X } from 'lucide-react';
 import { BsCloudArrowUp } from 'react-icons/bs';
-import type { FormComponentProps } from '../types/candidate';
+import { supabase } from '../supabaseClient';
+import type { FormComponentProps } from '../types/candidate'; 
+import { saveCandidate } from '../Candidate/candidateService';
 
 export default function UploadCV({
   formData,
@@ -10,10 +12,11 @@ export default function UploadCV({
   onNext,
   onBack,
   basicData,
-}: FormComponentProps) {
+}: FormComponentProps) {  
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [agreeToContact, setAgreeToContact] = useState(false);
+   const [loading, setLoading] = useState(false);  
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: DragEvent<HTMLDivElement>) => {
@@ -62,17 +65,55 @@ export default function UploadCV({
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (selectedFile && agreeToContact) {
-      onNext();
-    } else if (!selectedFile) {
-      alert('Please upload your CV');
-    } else if (!agreeToContact) {
-      alert('Please agree to be contacted');
-    }
-  };
+  // const handleSubmit = (e: FormEvent) => {
+  //   e.preventDefault();
+  //   if (selectedFile && agreeToContact) {
+  //     onNext();
+  //   } else if (!selectedFile) {
+  //     alert('Please upload your CV');
+  //   } else if (!agreeToContact) {
+  //     alert('Please agree to be contacted');
+  //   }
+  // };
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
 
+  if (!selectedFile) {
+    alert('Please upload your CV');
+    return;
+  }
+  if (!agreeToContact) {
+    alert('Please agree to be contacted');
+    return;
+  }
+
+  try {
+    setLoading(true); 
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('Not authenticated');
+
+    await saveCandidate(
+      {
+        basicData: basicData!,
+        professionalData: {
+          interestedField: formData.interestedField,
+          yearsOfExperience: formData.yearsOfExperience,
+        },
+        formData,
+        cvFile: selectedFile,
+      },
+      user.id
+    );
+
+    onNext(); // Dashboard එකට redirect
+  } catch (error: any) {
+    console.error(error);
+    alert(`Submission failed: ${error.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4 font-sans">
       

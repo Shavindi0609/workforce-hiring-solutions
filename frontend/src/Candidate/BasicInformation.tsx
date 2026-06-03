@@ -3,32 +3,35 @@ import { Link } from 'react-router-dom';
 import type { ChangeEvent, FormEvent} from 'react';
 import { User, Mail, Calendar, Info, ArrowRight } from 'lucide-react';
 
+
 // ===================== TYPES =====================
-export interface BasicInfoData {
-  fullName: string;
-  email: string;
-  countryCode: string;
-  mobileNumber: string;
-  dob: string;           // YYYY-MM-DD format
-  linkedin: string;
-  age: string | number;  // displayed as string '--' or number
-}
+// export interface BasicInfoData {
+//   fullName: string;
+//   email: string;
+//   countryCode: string;
+//   mobileNumber: string;
+//   dob: string;           // YYYY-MM-DD format
+//   linkedin: string;
+//   age: string | number;  // displayed as string '--' or number
+// }
+
+import type { BasicInfoData } from '../types/candidate';
 
 interface BasicInformationProps {
   onNext: (data: BasicInfoData) => void;
-  initialData?: Partial<BasicInfoData>;
+  initialData?: BasicInfoData; 
 }
 
 // ===================== MAIN COMPONENT =====================
+
 export default function BasicInformation({ onNext, initialData }: BasicInformationProps) {
-  // Form state
   const [formData, setFormData] = useState<BasicInfoData>({
     fullName: initialData?.fullName || '',
     email: initialData?.email || '',
-    countryCode: initialData?.countryCode || '+94', // Changed default to Sri Lanka
+    countryCode: '+94', 
     mobileNumber: initialData?.mobileNumber || '',
-    dob: initialData?.dob || '',
-    linkedin: initialData?.linkedin || '',
+    dob: initialData?.dob || '',      
+    linkedin: initialData?.linkedin || '', 
     age: initialData?.age || '--',
   });
 
@@ -340,15 +343,13 @@ export default function BasicInformation({ onNext, initialData }: BasicInformati
 
           {/* FOOTER BUTTON */}
           <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/40 flex justify-end">
-          <Link to="/candidate/registration/professional">
             <button
-              type="submit"
+              type="submit" // දැන් මෙය කෙලින්ම handleSubmit අමතයි
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm tracking-wide group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Continue
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
-            </Link>
           </div>
         </form>
       </div>

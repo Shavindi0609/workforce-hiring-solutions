@@ -14,6 +14,8 @@ import CandidateDashboard from './Admin/CandidateDashboard';
 import AdminDashboard from './Admin/AdminDashboard';
 import DashboardLayout from './components/DashboardLayout';
 import SettingsPage from './Admin/Settings';
+import Dashboard from './Candidate/CandidateDashboard';
+import CandidateDashboardLayout from './components/CandidateDashboardLayout';
 import Reports from './Admin/Reports';
 import ProfileCreated from './Candidate/ProfileCreated';
 import SalaryInsights from './Admin/SalaryInsights';
@@ -21,11 +23,25 @@ import Fields from './Admin/Fields';
 import Skills from './Admin/Skills';
 import Users from './Admin/Users';
 import Navbar from './components/Navbar';
-import type { BasicInfoData, ProfessionalInfoData } from './Candidate/types';
-import type { CandidateFormData } from './types/candidate';
+import { supabase } from './supabaseClient';
+import { saveCandidate } from './Candidate/candidateService';
+import MyCVPage from './Candidate/MyCVPage';
+
+// නිවැරදි:
+import type { BasicInfoData, ProfessionalInfoData, CandidateFormData } from './types/candidate';
+
 import './App.css';
 
 const initialFormData: CandidateFormData = {
+  fullName: '',
+  email: '',
+  mobileNumber: '',
+  dob: '',           // ← dateOfBirth → dob
+  linkedin: '',      // ← linkedInProfile → linkedin
+  age: '--',         // ← add this
+
+  interestedField: '',
+  yearsOfExperience: '',
   skills: [],
   status: '',
   availability: '',
@@ -63,16 +79,34 @@ function RegistrationFlow() {
     navigate('/candidate/registration/upload');
   };
 
-  const handleFinalSubmit = () => {
-    const completeProfile = { 
-      basicData, 
-      professionalData, 
-      ...formData 
-    };
-    console.log('Complete profile:', completeProfile);
-    alert('Registration completed! Redirecting to dashboard...');
-    navigate('/candidate/dashboard');
-  };
+const handleFinalSubmit = async () => {
+  // formData.cv check
+  if (!formData.cv) {
+    alert('CV required');
+    return;
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    navigate('/signin');
+    return;
+  }
+
+  try {
+    await saveCandidate(
+      {
+        basicData: basicData!,
+        professionalData: professionalData!,
+        formData,
+        cvFile: formData.cv,
+      },
+      user.id
+    );
+    navigate('/candidate/profile'); // Success page
+  } catch (err: any) {
+    alert(`Error: ${err.message}`);
+  }
+};
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -179,11 +213,10 @@ function App() {
         
         {/* Registration Flow - Public access */}
         <Route path="/candidate/registration/*" element={<RegistrationFlow />} />
-        <Route path="/candidate/profile" element={<ProfileCreated />} />
         
         {/* Dashboard Routes - Now public without authentication */}
         <Route element={<DashboardLayout />}>
-          <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+          <Route path="/admin/candidate-dashboard" element={<CandidateDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/settings" element={<SettingsPage />} />       
           <Route path="/exportdata" element={<ExportData />} />
@@ -191,12 +224,21 @@ function App() {
           <Route path="/admin/fields" element={<Fields />} />
           <Route path="/admin/skills" element={<Skills />} />
           <Route path="/admin/users" element={<Users />} />
+
         
           <Route path="/admin/salary-insights" element={<SalaryInsights />} />
         </Route>
         
+        <Route element={<CandidateDashboardLayout />}>
+          <Route path="/candidate/candidate-dashboard" element={<Dashboard />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/candidate/profile" element={<ProfileCreated />} />
+          <Route path="/candidate/cv" element={<MyCVPage />} />
+          {/* ... other candidate routes */}
+        </Route>
+
         {/* Redirects */}
-        <Route path="/" element={<Navigate to="/signin" replace />} />
+        <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/candidate" element={<Navigate to="/candidate/registration/basic" replace />} />
         <Route path="*" element={<Navigate to="/candidate/registration/basic" replace />} />
       </Routes>
