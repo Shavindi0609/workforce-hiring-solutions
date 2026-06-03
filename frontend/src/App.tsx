@@ -10,9 +10,11 @@ import UploadCV from './Candidate/UploadCV';
 import SignIn from './Candidate/SignIn';
 import Home from './Candidate/Home';
 import ExportData from './Candidate/ExportData';
-import CandidateDashboard from './Candidate/CandidateDashboard';
+import CandidateDashboard from './Admin/CandidateDashboard';
+import Dashboard from './Candidate/CandidateDashboard';
 import AdminDashboard from './Admin/AdminDashboard';
 import DashboardLayout from './components/DashboardLayout';
+import CandidateDashboardLayout from './components/CandidateDashboardLayout';
 import SettingsPage from './Candidate/Settings';
 import Reports from './Admin/Reports';
 import ProfileCreated from './Candidate/ProfileCreated';
@@ -23,6 +25,7 @@ import Users from './Admin/Users';
 import Navbar from './components/Navbar';
 import { supabase } from './supabaseClient';
 import { saveCandidate } from './Candidate/candidateService';
+import MyCVPage from './Candidate/MyCVPage';
 
 // නිවැරදි:
 import type { BasicInfoData, ProfessionalInfoData, CandidateFormData } from './types/candidate';
@@ -210,11 +213,10 @@ function App() {
         
         {/* Registration Flow - Public access */}
         <Route path="/candidate/registration/*" element={<RegistrationFlow />} />
-        <Route path="/candidate/profile" element={<ProfileCreated />} />
         
         {/* Dashboard Routes - Now public without authentication */}
         <Route element={<DashboardLayout />}>
-          <Route path="/candidate/dashboard" element={<CandidateDashboard />} />
+          <Route path="/admin/candidate-dashboard" element={<CandidateDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/settings" element={<SettingsPage />} />       
           <Route path="/exportdata" element={<ExportData />} />
@@ -222,10 +224,19 @@ function App() {
           <Route path="/admin/fields" element={<Fields />} />
           <Route path="/admin/skills" element={<Skills />} />
           <Route path="/admin/users" element={<Users />} />
+
         
           <Route path="/admin/salary-insights" element={<SalaryInsights />} />
         </Route>
         
+        <Route element={<CandidateDashboardLayout />}>
+          <Route path="/candidate/candidate-dashboard" element={<Dashboard />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/candidate/profile" element={<ProfileCreated />} />
+          <Route path="/candidate/cv" element={<MyCVPage />} />
+          {/* ... other candidate routes */}
+        </Route>
+
         {/* Redirects */}
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="/candidate" element={<Navigate to="/candidate/registration/basic" replace />} />
