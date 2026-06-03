@@ -74,7 +74,7 @@ if (activeTab === 'signup') {
       if (profile?.role === 'admin') {
         navigate('/admin/dashboard'); 
       } else {
-        navigate('/candidate/dashboard'); 
+        navigate('/candidate/candidate-dashboard'); 
       }
     }
   }
