@@ -1,6 +1,7 @@
+// src/Candidate/SignIn.tsx
 import React, { useState } from 'react';
 import '../global.css';
-import { supabase } from '../supabaseClient'; 
+import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom'; 
 
 import {
@@ -20,68 +21,108 @@ const SignIn = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('signin');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   
-  // Supabase Auth States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
 
-    // Authentication Logic
   const handleAuth = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-if (activeTab === 'signup') {
-  const { data, error } = await supabase.auth.signUp({ 
-    email, 
-    password,
-    options: { data: { full_name: fullName } } 
-  });
-
-  if (error) {
-    alert(error.message);
-    return; 
-  } 
-
-  await supabase.auth.signOut();
-  
-  alert('Sign up successful! Please check your email for confirmation.');
-  setActiveTab('signin'); 
-
-  } else {
-    // 2. Sign In Logic
-    const { data, error } = await supabase.auth.signInWithPassword({ 
-      email, 
-      password 
-    });
+    e.preventDefault();
+    setLoading(true);
     
-    if (error) {
-      alert(error.message);
-      return;
-    }
+    if (activeTab === 'signup') {
+      // Sign Up
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: { 
+          data: { 
+            full_name: fullName
+          } 
+        } 
+      });
 
-    if (data.user) {
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
+      if (error) {
+        alert(error.message);
+        setLoading(false);
+        return; 
+      } 
 
-      if (profileError) {
-        alert("Error fetching user profile: " + profileError.message);
+      if (data.user) {
+        alert('Sign up successful! Please check your email for confirmation.');
+        setActiveTab('signin');
+        setEmail('');
+        setPassword('');
+        setFullName('');
+      }
+      setLoading(false);
+
+    } else {
+      // Sign In
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
+      
+      if (error) {
+        alert(error.message);
+        setLoading(false);
         return;
       }
 
-      if (profile?.role === 'admin') {
-        navigate('/admin/dashboard'); 
-      } else {
-        navigate('/candidate/candidate-dashboard'); 
+      if (data.user) {
+        // Get user role from profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          navigate('/candidate/candidate-dashboard');
+        } else if (profile?.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/candidate/candidate-dashboard');
+        }
       }
+      setLoading(false);
     }
-  }
-};
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/candidate/candidate-dashboard`
+        }
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+  const handleLinkedInSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'linkedin_oidc',
+        options: {
+          redirectTo: `${window.location.origin}/candidate/candidate-dashboard`
+        }
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
   return (
     <div className="auth-container">
-      {/* LEFT SIDE */}
+      {/* LEFT SIDE - No changes */}
       <div className="auth-left">
         <div className="wave-bg"></div>
         <div className="top-logo">
@@ -120,27 +161,47 @@ if (activeTab === 'signup') {
             {activeTab === 'signup' && (
               <div className="input-group">
                 <FiUser className="input-icon" />
-                <input type="text" placeholder="Full Name" required onChange={(e) => setFullName(e.target.value)} />
+                <input 
+                  type="text" 
+                  placeholder="Full Name" 
+                  required 
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)} 
+                />
               </div>
             )}
             <div className="input-group">
               <FiMail className="input-icon" />
-              <input type="email" placeholder="Email Address" required onChange={(e) => setEmail(e.target.value)} />
+              <input 
+                type="email" 
+                placeholder="Email Address" 
+                required 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)} 
+              />
             </div>
             <div className="input-group">
               <FiLock className="input-icon" />
-              <input type={showPassword ? 'text' : 'password'} placeholder="Password" required onChange={(e) => setPassword(e.target.value)} />
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                placeholder="Password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} 
+              />
               <button type="button" className="eye-btn" onClick={() => setShowPassword(!showPassword)}>
                 {showPassword ? <FiEyeOff /> : <FiEye />}
               </button>
             </div>
-            <button type="submit" className="submit-btn">{activeTab === 'signin' ? 'Sign In' : 'Create Account'}</button>
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? 'Loading...' : (activeTab === 'signin' ? 'Sign In' : 'Create Account')}
+            </button>
           </form>
 
           <div className="divider"><span></span><p>or continue with</p><span></span></div>
           <div className="social-buttons">
-            <button type="button"><FcGoogle /></button>
-            <button type="button"><FaLinkedin style={{ color: '#0a66c2' }} /></button>
+            <button type="button" onClick={handleGoogleSignIn}><FcGoogle /></button>
+            <button type="button" onClick={handleLinkedInSignIn}><FaLinkedin style={{ color: '#0a66c2' }} /></button>
           </div>
 
           <div className="footer-text">
