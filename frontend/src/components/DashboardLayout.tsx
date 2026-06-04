@@ -1,19 +1,83 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
   UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase, 
 } from 'lucide-react';
 import logo from '../assets/logo.png';
-import securityImage from '../assets/8.avif'; // Your security image
+import securityImage from '../assets/8.avif';
 
 // Main DashboardLayout Component
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Fetch current user on component mount
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) throw error;
+        
+        if (user) {
+          setUser(user);
+          
+          // Get user profile (id and role)
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, role')
+            .eq('id', user.id)
+            .single();
+          
+          if (profileError) {
+            console.error("Error fetching user profile:", profileError);
+          } else {
+            setUserProfile(profile);
+          }
+        } else {
+          // No user, redirect to signin
+          navigate('/signin');
+        }
+      } catch (err) {
+        console.error("Error getting user:", err);
+        navigate('/signin');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    getUser();
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        // Refresh profile
+        supabase
+          .from('profiles')
+          .select('id, role')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => setUserProfile(data));
+      } else {
+        setUser(null);
+        setUserProfile(null);
+      }
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   // Handle window resize
   useEffect(() => {
@@ -29,9 +93,14 @@ export default function DashboardLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleLogout = () => {
-    console.log('Logging out...');
-    navigate('/signin');
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigate('/signin');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
   };
 
   const toggleSidebar = () => {
@@ -55,6 +124,25 @@ export default function DashboardLayout() {
   ];
 
   const isActiveRoute = (path: string) => location.pathname === path;
+
+  // Get display name
+  const getDisplayName = () => {
+    if (userProfile?.full_name) return userProfile.full_name;
+    if (user?.user_metadata?.full_name) return user.user_metadata.full_name;
+    if (user?.email) return user.email.split('@')[0];
+    return 'User';
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -89,7 +177,7 @@ export default function DashboardLayout() {
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                   <User size={18} className="text-white" />
                 </div>
-                <span className="text-sm font-medium text-gray-700 hidden md:block">John Doe</span>
+                <span className="text-sm font-medium text-gray-700 hidden md:block">{getDisplayName()}</span>
                 <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 hidden md:block ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -103,13 +191,24 @@ export default function DashboardLayout() {
                           <User size={24} className="text-white" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-800">John Doe</p>
-                          <p className="text-sm text-gray-500">john.doe@workforce.com</p>
+                          <p className="font-semibold text-gray-800">{getDisplayName()}</p>
+                          <p className="text-sm text-gray-500">{user?.email}</p>
+                          {userProfile?.role && (
+                            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 inline-block">
+                              {userProfile.role}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className="py-2">
-                      <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                      <button 
+                        onClick={() => {
+                          navigate('/settings');
+                          setIsProfileOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
                         <User size={18} />
                         <span>Your Profile</span>
                       </button>
@@ -141,7 +240,7 @@ export default function DashboardLayout() {
         </div>
       </nav>
 
-      {/* Desktop Sidebar - FULL COVER LEFT SIDE TOP TO BOTTOM */}
+      {/* Desktop Sidebar */}
       <aside 
         className={`fixed left-0 top-0 bottom-0 z-30 bg-white border-r border-gray-200 overflow-y-auto transition-all duration-300 ${
           sidebarOpen ? 'w-64' : 'w-20'
@@ -183,11 +282,10 @@ export default function DashboardLayout() {
             ))}
           </nav>
 
-          {/* Secure & Confidential Section with Image - Below Navigation */}
+          {/* Secure & Confidential Section */}
           {sidebarOpen && (
             <div className="px-5 py-3 mt-2">
               <div className="bg-white rounded-xl p-2 border border-blue-100 shadow-sm">
-                {/* Security Image */}
                 <div className="flex justify-center mb-2">
                   <img 
                     src={securityImage} 
@@ -202,7 +300,7 @@ export default function DashboardLayout() {
                   <p className="text-xs text-gray-500 mt-2 leading-relaxed">
                     All candidate data is encrypted
                   </p>
-                  <p className="text-xs text-gray-500 leading-relaxed">and stored securely </p>
+                  <p className="text-xs text-gray-500 leading-relaxed">and stored securely</p>
                 </div>
               </div>
             </div>
@@ -221,8 +319,8 @@ export default function DashboardLayout() {
             </div>
           )}
           
-          {/* Copyright Section - At bottom */}
-          <div className={`p-6 border-t border-gray-100  ${!sidebarOpen ? 'flex justify-center' : ''}`}>
+          {/* Copyright Section */}
+          <div className={`p-6 border-t border-gray-100 ${!sidebarOpen ? 'flex justify-center' : ''}`}>
             <div className={`${!sidebarOpen ? 'text-center' : 'text-left'}`}>
               <p className="text-xs text-gray-500">
                 © {new Date().getFullYear()} Workforce Hiring Solutions
@@ -273,7 +371,7 @@ export default function DashboardLayout() {
                 ))}
               </nav>
               
-              {/* Mobile Security Section with Image */}
+              {/* Mobile Security Section */}
               <div className="px-4 py-3 border-t border-gray-100">
                 <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">

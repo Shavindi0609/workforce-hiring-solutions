@@ -30,9 +30,9 @@ const testConnections = async () => {
       .select('count', { count: 'exact', head: true });
     
     if (candidateError) {
-      console.error('❌ Candidates table error:', candidateError.message);
+      console.error('Candidates table error:', candidateError.message);
     } else {
-      console.log('✅ Candidates table connected. Count:', candidateCount);
+      console.log('Candidates table connected. Count:', candidateCount);
     }
     
     // Test fields table
@@ -41,11 +41,11 @@ const testConnections = async () => {
       .select('count', { count: 'exact', head: true });
     
     if (fieldError) {
-      console.error('❌ Fields table error:', fieldError.message);
+      console.error(' Fields table error:', fieldError.message);
     } else {
-      console.log('✅ Fields table connected. Count:', fieldCount);
+      console.log(' Fields table connected. Count:', fieldCount);
       if (fieldCount === 0) {
-        console.log('⚠️ Fields table is empty! Please insert sample data.');
+        console.log(' Fields table is empty! Please insert sample data.');
       }
     }
     
@@ -55,12 +55,12 @@ const testConnections = async () => {
       .select('count', { count: 'exact', head: true });
     
     if (skillError) {
-      console.error('❌ Skills table error:', skillError.message);
-      console.log('💡 Tip: Run the CREATE TABLE script for skills');
+      console.error(' Skills table error:', skillError.message);
+      console.log(' Tip: Run the CREATE TABLE script for skills');
     } else {
-      console.log('✅ Skills table connected. Count:', skillCount);
+      console.log(' Skills table connected. Count:', skillCount);
       if (skillCount === 0) {
-        console.log('⚠️ Skills table is empty! Please insert sample data.');
+        console.log(' Skills table is empty! Please insert sample data.');
       }
     }
     
@@ -69,7 +69,7 @@ const testConnections = async () => {
       .from('candidates')
       .select('count', { count: 'exact', head: true });
     
-    console.log('📊 Dashboard ready. Candidates:', candidatesCount);
+    console.log(' Dashboard ready. Candidates:', candidatesCount);
     
   } catch (err) {
     console.error('Connection test failed:', err);
@@ -80,9 +80,9 @@ const { count: reportCount, error: reportError } = await supabase
     .select('count', { count: 'exact', head: true });
 
 if (reportError) {
-    console.error('❌ Reports table error:', reportError.message);
+    console.error('Reports table error:', reportError.message);
 } else {
-    console.log('✅ Reports table connected. Count:', reportCount);
+    console.log('Reports table connected. Count:', reportCount);
 }
 };
 
