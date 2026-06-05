@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+// ProfessionalInfo.tsx (updated version)
+import { useState, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Briefcase, Clock, ArrowLeft, ArrowRight, Check, ChevronDown } from 'lucide-react';
-// නිවැරදි:
+import { Briefcase, Clock, ArrowLeft, ArrowRight, Check, ChevronDown, Loader } from 'lucide-react';
 import type { BasicInfoData, ProfessionalInfoData } from '../types/candidate';
+import { supabase } from '../supabaseClient';
 import manImage from '../assets/OIP.webp';
+import toast from 'react-hot-toast';
 
 interface ProfessionalInfoProps {
   onNext: (data: ProfessionalInfoData) => void;
@@ -12,7 +13,19 @@ interface ProfessionalInfoProps {
   initialData?: ProfessionalInfoData;
 }
 
+interface Field {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  candidates_count: number;
+}
+
 export default function ProfessionalInfo({ onNext, onBack, initialData }: ProfessionalInfoProps) {
+  const [fields, setFields] = useState<Field[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState<ProfessionalInfoData>({
     currentRole: initialData?.currentRole || '',
     company: initialData?.company || '',
@@ -26,6 +39,37 @@ export default function ProfessionalInfo({ onNext, onBack, initialData }: Profes
     yearsOfExperience: initialData?.yearsOfExperience || '',
   });
 
+  // Fetch fields from Supabase
+  useEffect(() => {
+    fetchFields();
+  }, []);
+
+  const fetchFields = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch only active fields
+      const { data, error: fetchError } = await supabase
+        .from('fields')
+        .select('id, name, description, status, candidates_count')
+        .eq('status', 'Active')
+        .order('name', { ascending: true });
+
+      if (fetchError) throw fetchError;
+      
+      console.log('✅ Loaded fields:', data);
+      setFields(data || []);
+      
+    } catch (err: any) {
+      console.error('❌ Error fetching fields:', err);
+      setError(err.message);
+      toast.error('Failed to load fields: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -36,22 +80,6 @@ export default function ProfessionalInfo({ onNext, onBack, initialData }: Profes
     onNext(formData);
   };
 
-  // Interested Field options
-  const interestedFields = [
-    'Software Development',
-    'Data Science & AI',
-    'Cloud Computing',
-    'DevOps & SRE',
-    'Cybersecurity',
-    'Product Management',
-    'UI/UX Design',
-    'Quality Assurance',
-    'Technical Writing',
-    'IT Support',
-    'Network Engineering',
-    'Database Administration',
-  ];
-
   // Years of Experience options
   const yearsOptions = [
     'Fresher (0-1 years)',
@@ -61,6 +89,36 @@ export default function ProfessionalInfo({ onNext, onBack, initialData }: Profes
     '8-10 years',
     '10+ years',
   ];
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading fields...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center bg-red-50 p-8 rounded-xl max-w-md">
+          <div className="text-red-500 text-lg mb-2">⚠️ Error</div>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <button 
+            onClick={fetchFields}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4 font-sans">
@@ -125,7 +183,7 @@ export default function ProfessionalInfo({ onNext, onBack, initialData }: Profes
               
               {/* LEFT COLUMN - Form Fields - 2/3 width */}
               <div className="w-full lg:w-2/3 space-y-12">
-                {/* Interested Field */}
+                {/* Interested Field - NOW CONNECTED TO SUPABASE FIELDS */}
                 <div>
                   <label className="block text-md font-semibold text-slate-700 mb-4">
                     Interested Field <span className="text-red-500">*</span>
@@ -140,12 +198,22 @@ export default function ProfessionalInfo({ onNext, onBack, initialData }: Profes
                       className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl text-md focus:border-lime-400 focus:ring-2 focus:ring-lime-100 outline-none transition-all appearance-none cursor-pointer text-slate-600"
                     >
                       <option value="">Select your interested field</option>
-                      {interestedFields.map(field => (
-                        <option key={field} value={field}>{field}</option>
+                      {fields.map(field => (
+                        <option key={field.id} value={field.name}>
+                          {field.name} 
+                        </option>
                       ))}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
                   </div>
+                  {fields.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      No active fields available. Please contact administrator to add fields.
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Showing {fields.length} active field{fields.length !== 1 ? 's' : ''}
+                  </p>
                 </div>
 
                 {/* Years of Experience */}
@@ -223,7 +291,7 @@ export default function ProfessionalInfo({ onNext, onBack, initialData }: Profes
             </button>
             <button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl..."
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-sm hover:shadow transition-all duration-200 flex items-center gap-2 text-sm group"
             >
               Continue
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

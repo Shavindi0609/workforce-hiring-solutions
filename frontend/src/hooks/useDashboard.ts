@@ -1,4 +1,4 @@
-// src/hooks/useDashboard.ts (updated for your schema)
+// src/hooks/useDashboard.ts (updated)
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
@@ -12,7 +12,14 @@ export interface DashboardData {
     statusData: Array<{ name: string; v: number }>;
     salaryData: Array<{ range: string; v: number }>;
     skillsData: Array<{ name: string; v: number }>;
-    recentCandidates: Array<{ name: string; field: string; status: string; created_at: string }>;
+    recentCandidates: Array<{ 
+        id: string; 
+        name: string; 
+        field: string; 
+        status: string; 
+        cv_url: string;
+        created_at: string 
+    }>;
 }
 
 export const useDashboard = () => {
@@ -104,14 +111,16 @@ export const useDashboard = () => {
                 v: candidatesData?.filter(c => c.salary_range && range.pattern.test(c.salary_range)).length || 0
             }));
             
-            // Recent candidates
+            // Recent candidates with id and cv_url
             const recentCandidates = candidatesData
                 ?.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .slice(0, 5)
                 .map(c => ({
+                    id: c.id,
                     name: c.name,
                     field: c.interested_field,
                     status: c.status,
+                    cv_url: c.cv_url,
                     created_at: c.created_at
                 })) || [];
             
