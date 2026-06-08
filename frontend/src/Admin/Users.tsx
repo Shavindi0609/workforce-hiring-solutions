@@ -13,7 +13,8 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [modalTitle, setModalTitle] = useState('');
 
-  const { users, loading, createUser, updateUser, deleteUser, resetPassword } = useUsers();
+  // Add userRoles here
+  const { users, userRoles, loading, createUser, updateUser, deleteUser, resetPassword } = useUsers();
 
   const activeUsers = users.filter(u => u.status === 'Active').length;
   const inactiveUsers = users.filter(u => u.status === 'Inactive').length;
@@ -22,7 +23,7 @@ export default function Users() {
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.role.toLowerCase().includes(searchTerm.toLowerCase());
+                          (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesRole = roleFilter === 'All' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'All' || user.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
@@ -165,7 +166,7 @@ export default function Users() {
               <th className="p-4 text-center">Status</th>
               <th className="p-4">Last Login</th>
               <th className="p-4 text-center">Actions</th>
-             </tr>
+            </tr>
           </thead>
           <tbody className="text-sm">
             {filteredUsers.map((user, index) => (
@@ -193,7 +194,7 @@ export default function Users() {
                     user.role === 'Analyst' ? 'bg-orange-100 text-orange-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
-                    {user.role}
+                    {user.role || 'Unknown'}
                   </span>
                 </td>
                 <td className="p-4 text-center">
@@ -208,7 +209,7 @@ export default function Users() {
                 <td className="p-4 text-gray-500">
                   <div className="flex items-center gap-1">
                     <Clock size={14} className="text-gray-400" />
-                    <span>{new Date(user.last_login).toLocaleDateString()}</span>
+                    <span>{user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</span>
                   </div>
                 </td>
                 <td className="p-4">
@@ -261,6 +262,7 @@ export default function Users() {
         onSubmit={handleSubmit}
         user={selectedUser}
         title={modalTitle}
+        userRoles={userRoles}
       />
     </div>
   );

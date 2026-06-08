@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, Users, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
-  UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase, 
+  LayoutDashboard, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
+  UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase,  FileText,
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import securityImage from '../assets/8.avif';
@@ -119,7 +119,7 @@ export default function DashboardLayout() {
     { icon: <BarChartBig size={20}/>, label: "Reports", to: "/admin/reports" },
     { icon: <CircleDollarSign size={20}/>, label: "Salary Insights", to: "/admin/salary-insights" },
     { icon: <Settings size={20}/>, label: "Settings", to: "/settings" },
-    { icon: <Users size={20}/>, label: "Users", to: "/admin/users" },
+    { icon: <FileText size={20}/>, label: "Jobs", to: "/admin/jobs" },
     { icon: <Download size={20}/>, label: "Export Data", to: "/exportdata" },
   ];
 
