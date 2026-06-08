@@ -154,7 +154,7 @@ export default function EditProfile() {
         .eq('id', user.id)
         .single();
 
-      if (error || !data) { navigate('/candidate/dashboard'); return; }
+      if (error || !data) { navigate('/candidate/candidate-dashboard'); return; }
 
       setForm({
         name: data.name ?? '',
@@ -249,7 +249,7 @@ export default function EditProfile() {
       if (updateError) throw updateError;
 
       showToast('success', 'Profile updated successfully!');
-      setTimeout(() => navigate('/candidate/dashboard'), 1200);
+      setTimeout(() => navigate('/candidate/candidate-dashboard'), 1200);
     } catch (err: any) {
       showToast('error', err.message ?? 'Something went wrong.');
     } finally {
@@ -467,7 +467,7 @@ export default function EditProfile() {
         <div className="mt-8 flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => navigate('/candidate/dashboard')}
+            onClick={() => navigate('/candidate/candidate-dashboard')}
             className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition shadow-sm"
           >
             Cancel
