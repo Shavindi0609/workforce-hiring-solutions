@@ -21,14 +21,14 @@ import ProfileCreated from './Candidate/ProfileCreated';
 import SalaryInsights from './Admin/SalaryInsights';
 import Fields from './Admin/Fields';
 import Skills from './Admin/Skills';
-import Users from './Admin/Users';
+import CandidateJobs from './Candidate/Jobs';
 import Navbar from './components/Navbar';
 import { supabase } from './supabaseClient';
 import { saveCandidate } from './Candidate/candidateService';
 import MyCVPage from './Candidate/MyCVPage';
 import EditProfile from './Candidate/Editprofile';
+import JobsManagement from './Admin/JobsManagement';
 
-// නිවැරදි:
 import type { BasicInfoData, ProfessionalInfoData, CandidateFormData } from './types/candidate';
 
 import './App.css';
@@ -37,9 +37,9 @@ const initialFormData: CandidateFormData = {
   fullName: '',
   email: '',
   mobileNumber: '',
-  dob: '',           // ← dateOfBirth → dob
-  linkedin: '',      // ← linkedInProfile → linkedin
-  age: '--',         // ← add this
+  dob: '',         
+  linkedin: '',     
+  age: '--',    
 
   interestedField: '',
   yearsOfExperience: '',
@@ -224,7 +224,7 @@ function App() {
           <Route path="/admin/reports" element={<Reports />} />
           <Route path="/admin/fields" element={<Fields />} />
           <Route path="/admin/skills" element={<Skills />} />
-          <Route path="/admin/users" element={<Users />} />
+          <Route path="/admin/jobs" element={<JobsManagement />} />
 
         
           <Route path="/admin/salary-insights" element={<SalaryInsights />} />
@@ -232,7 +232,7 @@ function App() {
         
         <Route element={<CandidateDashboardLayout />}>
           <Route path="/candidate/candidate-dashboard" element={<Dashboard />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/candidate/jobs" element={<CandidateJobs />} />
           <Route path="/candidate/profile" element={<ProfileCreated />} />
           <Route path="/candidate/cv" element={<MyCVPage />} />
           <Route path="/candidate/edit-profile" element={<EditProfile />} />

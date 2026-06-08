@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, Users, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
-  UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase, 
+  LayoutDashboard, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
+  UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase, FileText, Camera,
+  Save, AlertCircle, Trash2
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import securityImage from '../assets/8.avif';
 
-// Main DashboardLayout Component
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -16,11 +16,24 @@ export default function DashboardLayout() {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    location: '',
+    bio: '',
+    role: ''
+  });
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Fetch current user on component mount
   useEffect(() => {
     const getUser = async () => {
       try {
@@ -31,20 +44,47 @@ export default function DashboardLayout() {
         if (user) {
           setUser(user);
           
-          // Get user profile (id and role)
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('id, role')
+            .select('*')
             .eq('id', user.id)
             .single();
           
-          if (profileError) {
-            console.error("Error fetching user profile:", profileError);
-          } else {
+          if (profileError && profileError.code === 'PGRST116') {
+            // Create profile if it doesn't exist
+            const { data: newProfile, error: insertError } = await supabase
+              .from('profiles')
+              .insert([{ 
+                id: user.id, 
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+                role: 'user'
+              }])
+              .select()
+              .single();
+            
+            if (!insertError && newProfile) {
+              setUserProfile(newProfile);
+              setProfileForm({
+                full_name: newProfile.full_name || '',
+                email: user.email || '',
+                phone: newProfile.phone || '',
+                location: newProfile.location || '',
+                bio: newProfile.bio || '',
+                role: newProfile.role || ''
+              });
+            }
+          } else if (profile) {
             setUserProfile(profile);
+            setProfileForm({
+              full_name: profile.full_name || '',
+              email: user.email || '',
+              phone: profile.phone || '',
+              location: profile.location || '',
+              bio: profile.bio || '',
+              role: profile.role || ''
+            });
           }
         } else {
-          // No user, redirect to signin
           navigate('/signin');
         }
       } catch (err) {
@@ -57,17 +97,25 @@ export default function DashboardLayout() {
     
     getUser();
     
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user);
-        // Refresh profile
-        supabase
+        const { data: profile } = await supabase
           .from('profiles')
-          .select('id, role')
+          .select('*')
           .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => setUserProfile(data));
+          .single();
+        setUserProfile(profile);
+        if (profile) {
+          setProfileForm({
+            full_name: profile.full_name || '',
+            email: session.user.email || '',
+            phone: profile.phone || '',
+            location: profile.location || '',
+            bio: profile.bio || '',
+            role: profile.role || ''
+          });
+        }
       } else {
         setUser(null);
         setUserProfile(null);
@@ -79,7 +127,6 @@ export default function DashboardLayout() {
     };
   }, [navigate]);
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024) {
@@ -111,6 +158,178 @@ export default function DashboardLayout() {
     }
   };
 
+  // Extract file path from avatar URL
+  const extractFilePath = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      // Find the position of 'profiles' in the path
+      const profilesIndex = pathParts.findIndex(part => part === 'profiles');
+      if (profilesIndex !== -1) {
+        // Return everything after 'profiles'
+        return pathParts.slice(profilesIndex + 1).join('/');
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Handle profile image removal
+  const handleRemoveImage = async () => {
+    if (!user || !userProfile?.avatar_url) return;
+
+    setUploading(true);
+    setUploadError(null);
+    
+    try {
+      // Extract file path from URL
+      const filePath = extractFilePath(userProfile.avatar_url);
+      
+      if (filePath) {
+        // Delete image from storage
+        const { error: deleteError } = await supabase.storage
+          .from('profiles')
+          .remove([filePath]);
+        
+        if (deleteError) {
+          console.warn('Error deleting from storage:', deleteError);
+          // Continue with profile update even if storage delete fails
+        }
+      }
+
+      // Update profile to remove avatar_url
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          avatar_url: null,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setUserProfile({ ...userProfile, avatar_url: null });
+      setSuccessMessage('Profile picture removed successfully!');
+      setShowRemoveConfirm(false);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (error: any) {
+      console.error('Error removing image:', error);
+      setUploadError(error.message || 'Failed to remove image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image size should be less than 5MB');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    setSuccessMessage(null);
+    
+    try {
+      // If there's an existing avatar, remove it first
+      if (userProfile?.avatar_url) {
+        const oldFilePath = extractFilePath(userProfile.avatar_url);
+        if (oldFilePath) {
+          await supabase.storage.from('profiles').remove([oldFilePath]);
+        }
+      }
+
+      // Create folder structure with user ID
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profiles')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('profiles')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          avatar_url: publicUrl, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setUserProfile({ ...userProfile, avatar_url: publicUrl });
+      setSuccessMessage('Profile picture updated successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      setUploadError(error.message || 'Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+
+    setUploading(true);
+    setUploadError(null);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profileForm.full_name,
+          phone: profileForm.phone,
+          location: profileForm.location,
+          bio: profileForm.bio,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setUserProfile({
+        ...userProfile,
+        full_name: profileForm.full_name,
+        phone: profileForm.phone,
+        location: profileForm.location,
+        bio: profileForm.bio
+      });
+
+      setEditingProfile(false);
+      setSuccessMessage('Profile updated successfully!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      setUploadError(error.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const navItems = [
     { icon: <LayoutDashboard size={20}/>, label: "Dashboard", to: "/admin/dashboard" },
     { icon: <UserPlus size={20}/>, label: "Candidates", to: "/admin/candidate-dashboard" },
@@ -119,19 +338,222 @@ export default function DashboardLayout() {
     { icon: <BarChartBig size={20}/>, label: "Reports", to: "/admin/reports" },
     { icon: <CircleDollarSign size={20}/>, label: "Salary Insights", to: "/admin/salary-insights" },
     { icon: <Settings size={20}/>, label: "Settings", to: "/settings" },
-    { icon: <Users size={20}/>, label: "Users", to: "/admin/users" },
+    { icon: <FileText size={20}/>, label: "Jobs", to: "/admin/jobs" },
     { icon: <Download size={20}/>, label: "Export Data", to: "/exportdata" },
   ];
 
   const isActiveRoute = (path: string) => location.pathname === path;
 
-  // Get display name
   const getDisplayName = () => {
     if (userProfile?.full_name) return userProfile.full_name;
     if (user?.user_metadata?.full_name) return user.user_metadata.full_name;
     if (user?.email) return user.email.split('@')[0];
     return 'User';
   };
+
+  // Remove Confirmation Modal
+  const RemoveConfirmModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <Trash2 size={24} className="text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800">Remove Profile Picture</h3>
+        </div>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to remove your profile picture? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowRemoveConfirm(false)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleRemoveImage}
+            disabled={uploading}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {uploading ? 'Removing...' : 'Remove'}
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const ProfileEditModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-800">Edit Profile</h2>
+          <button
+            onClick={() => {
+              setEditingProfile(false);
+              setUploadError(null);
+            }}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* Profile Image Section */}
+          <div className="flex flex-col items-center space-y-3">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center overflow-hidden">
+                {userProfile?.avatar_url ? (
+                  <img 
+                    src={userProfile.avatar_url} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <User size={48} className="text-white" />
+                )}
+              </div>
+              <div className="absolute -bottom-2 -right-2 flex gap-1">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors"
+                  disabled={uploading}
+                  title="Upload new picture"
+                >
+                  <Camera size={16} />
+                </button>
+                {userProfile?.avatar_url && (
+                  <button
+                    onClick={() => setShowRemoveConfirm(true)}
+                    className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors"
+                    disabled={uploading}
+                    title="Remove picture"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+            </div>
+            {uploading && <p className="text-sm text-gray-500">Processing...</p>}
+            {uploadError && (
+              <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                <AlertCircle size={16} />
+                <p className="text-sm">{uploadError}</p>
+              </div>
+            )}
+            {successMessage && (
+              <div className="flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                <p className="text-sm">{successMessage}</p>
+              </div>
+            )}
+            <p className="text-xs text-gray-500">Click camera to upload (Max 5MB), trash to remove</p>
+          </div>
+
+          {/* Profile Form */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                value={profileForm.full_name}
+                onChange={(e) => setProfileForm({...profileForm, full_name: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your full name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={profileForm.email}
+                disabled
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <input
+                type="tel"
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              <input
+                type="text"
+                value={profileForm.location}
+                onChange={(e) => setProfileForm({...profileForm, location: e.target.value})}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="City, Country"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+              <textarea
+                value={profileForm.bio}
+                onChange={(e) => setProfileForm({...profileForm, bio: e.target.value})}
+                rows={4}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Tell us about yourself..."
+              />
+            </div>
+
+            {userProfile?.role && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <input
+                  type="text"
+                  value={profileForm.role}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+          <button
+            onClick={() => {
+              setEditingProfile(false);
+              setUploadError(null);
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleProfileUpdate}
+            disabled={uploading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {uploading ? 'Saving...' : 'Save Changes'}
+            <Save size={18} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -146,36 +568,28 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-40 bg-white shadow-sm border-b border-gray-200 lg:left-64 transition-all duration-300">
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
           <div className="flex items-center gap-3">
-            <button 
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-200 lg:hidden"
-              aria-label="Toggle sidebar"
-            >
+            <button onClick={toggleSidebar} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600 lg:hidden">
               <Menu size={22} />
             </button>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            {/* Notification Button */}
-            <button className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-200">
+            <button className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600">
               <Bell size={20} />
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                3
-              </span>
+              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
             </button>
 
-            {/* Profile Dropdown */}
             <div className="relative">
-              <button 
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50 transition-all duration-200"
-              >
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                  <User size={18} className="text-white" />
+              <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                  {userProfile?.avatar_url ? (
+                    <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={18} className="text-white" />
+                  )}
                 </div>
                 <span className="text-sm font-medium text-gray-700 hidden md:block">{getDisplayName()}</span>
                 <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 hidden md:block ${isProfileOpen ? 'rotate-180' : ''}`} />
@@ -184,15 +598,19 @@ export default function DashboardLayout() {
               {isProfileOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                  <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
                     <div className="p-4 border-b border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                          <User size={24} className="text-white" />
+                        <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                          {userProfile?.avatar_url ? (
+                            <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={28} className="text-white" />
+                          )}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <p className="font-semibold text-gray-800">{getDisplayName()}</p>
-                          <p className="text-sm text-gray-500">{user?.email}</p>
+                          <p className="text-sm text-gray-500 truncate">{user?.email}</p>
                           {userProfile?.role && (
                             <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 inline-block">
                               {userProfile.role}
@@ -202,32 +620,17 @@ export default function DashboardLayout() {
                       </div>
                     </div>
                     <div className="py-2">
-                      <button 
-                        onClick={() => {
-                          navigate('/settings');
-                          setIsProfileOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
+                      <button onClick={() => { setIsProfileOpen(false); setEditingProfile(true); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                         <User size={18} />
-                        <span>Your Profile</span>
+                        <span>View & Edit Profile</span>
                       </button>
-                      <button 
-                        onClick={() => {
-                          navigate('/settings');
-                          setIsProfileOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
+                      <button onClick={() => { setIsProfileOpen(false); navigate('/settings'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                         <Settings size={18} />
                         <span>Account Settings</span>
                       </button>
                     </div>
                     <div className="border-t border-gray-100 py-2">
-                      <button 
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
+                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50">
                         <LogOut size={18} />
                         <span>Logout</span>
                       </button>
@@ -240,22 +643,12 @@ export default function DashboardLayout() {
         </div>
       </nav>
 
-      {/* Desktop Sidebar */}
-      <aside 
-        className={`fixed left-0 top-0 bottom-0 z-30 bg-white border-r border-gray-200 overflow-y-auto transition-all duration-300 ${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } hidden lg:block`}
-      >
+      <aside className={`fixed left-0 top-0 bottom-0 z-30 bg-white border-r border-gray-200 overflow-y-auto transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'} hidden lg:block`}>
         <div className="flex flex-col h-full">
-          {/* Logo Section */}
           <div className={`px-4 pt-6 pb-6 ${!sidebarOpen && 'flex justify-center'}`}>
             <div className={`flex items-center gap-2 ${!sidebarOpen && 'flex-col'}`}>
               <div className="p-[3px] rounded-full bg-gradient-to-r from-blue-500 to-green-500 inline-block">
-                <img 
-                  src={logo} 
-                  alt="WHS logo" 
-                  className="h-12 w-auto object-contain rounded-full bg-white"
-                />
+                <img src={logo} alt="WHS logo" className="h-12 w-auto object-contain rounded-full bg-white" />
               </div>
               {sidebarOpen && (
                 <div>
@@ -266,14 +659,11 @@ export default function DashboardLayout() {
             </div>
           </div>
           
-          {/* Navigation */}
           <nav className="flex-1 px-3 space-y-1">
             {navItems.map((item, index) => (
               <Link key={index} to={item.to}>
                 <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
-                  isActiveRoute(item.to) 
-                    ? 'bg-blue-50 text-blue-600 font-semibold' 
-                    : 'text-gray-600 font-semibold hover:bg-gray-50 hover:text-blue-500'
+                  isActiveRoute(item.to) ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-gray-600 font-semibold hover:bg-gray-50 hover:text-blue-500'
                 } ${!sidebarOpen && 'justify-center'}`}>
                   <span className="flex-shrink-0">{item.icon}</span>
                   {sidebarOpen && <span className="text-sm">{item.label}</span>}
@@ -282,55 +672,34 @@ export default function DashboardLayout() {
             ))}
           </nav>
 
-          {/* Secure & Confidential Section */}
           {sidebarOpen && (
             <div className="px-5 py-3 mt-2">
               <div className="bg-white rounded-xl p-2 border border-blue-100 shadow-sm">
                 <div className="flex justify-center mb-2">
-                  <img 
-                    src={securityImage} 
-                    alt="Secure & Confidential" 
-                    className="w-20 h-20 object-contain rounded-lg"
-                  />
+                  <img src={securityImage} alt="Secure & Confidential" className="w-20 h-20 object-contain rounded-lg" />
                 </div>
                 <div className="text-center">
-                  <h3 className="text-sm font-bold text-gray-800 flex items-center justify-center gap-2">
-                    Secure & Confidential
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-                    All candidate data is encrypted
-                  </p>
-                  <p className="text-xs text-gray-500 leading-relaxed">and stored securely</p>
+                  <h3 className="text-sm font-bold text-gray-800">Secure & Confidential</h3>
+                  <p className="text-xs text-gray-500 mt-2">All candidate data is encrypted and stored securely</p>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Collapsed Sidebar Security Icon */}
           {!sidebarOpen && (
             <div className="flex justify-center py-4">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
-                <img 
-                  src={securityImage} 
-                  alt="Secure" 
-                  className="w-8 h-8 object-cover"
-                />
+                <img src={securityImage} alt="Secure" className="w-8 h-8 object-cover" />
               </div>
             </div>
           )}
           
-          {/* Copyright Section */}
           <div className={`p-6 border-t border-gray-100 ${!sidebarOpen ? 'flex justify-center' : ''}`}>
-            <div className={`${!sidebarOpen ? 'text-center' : 'text-left'}`}>
-              <p className="text-xs text-gray-500">
-                © {new Date().getFullYear()} Workforce Hiring Solutions
-              </p>
-            </div>
+            <p className="text-xs text-gray-500">© {new Date().getFullYear()} Workforce Hiring Solutions</p>
           </div>
         </div>
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
       {mobileSidebarOpen && (
         <>
           <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
@@ -344,11 +713,7 @@ export default function DashboardLayout() {
               <div className="p-4 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <div className="p-[3px] rounded-full bg-gradient-to-r from-blue-500 to-green-500 inline-block">
-                    <img 
-                      src={logo} 
-                      alt="WHS logo" 
-                      className="h-12 w-auto object-contain rounded-full bg-white"
-                    />
+                    <img src={logo} alt="WHS logo" className="h-12 w-auto object-contain rounded-full bg-white" />
                   </div>
                   <div>
                     <h1 className="text-lg font-bold text-gray-800">WORKFORCE</h1>
@@ -360,9 +725,7 @@ export default function DashboardLayout() {
                 {navItems.map((item, index) => (
                   <Link key={index} to={item.to} onClick={() => setMobileSidebarOpen(false)}>
                     <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
-                      isActiveRoute(item.to) 
-                        ? 'bg-blue-50 text-blue-700 font-semibold' 
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                      isActiveRoute(item.to) ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
                     }`}>
                       <span className="flex-shrink-0">{item.icon}</span>
                       <span className="text-sm">{item.label}</span>
@@ -371,15 +734,10 @@ export default function DashboardLayout() {
                 ))}
               </nav>
               
-              {/* Mobile Security Section */}
               <div className="px-4 py-3 border-t border-gray-100">
                 <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <img 
-                      src={securityImage} 
-                      alt="Secure" 
-                      className="w-8 h-8 object-contain rounded"
-                    />
+                    <img src={securityImage} alt="Secure" className="w-8 h-8 object-contain rounded" />
                     <span className="text-xs font-semibold text-gray-700">Secure & Confidential</span>
                   </div>
                   <p className="text-[10px] text-gray-500">Your data is encrypted and securely stored</p>
@@ -387,21 +745,17 @@ export default function DashboardLayout() {
               </div>
               
               <div className="p-3 border-t border-gray-100">
-                <div className="text-center">
-                  <p className="text-xs text-gray-400">© {new Date().getFullYear()} Workforce Hiring Solutions</p>
-                </div>
+                <p className="text-xs text-gray-400 text-center">© {new Date().getFullYear()} Workforce Hiring Solutions</p>
               </div>
             </div>
           </aside>
         </>
       )}
 
-      {/* Main Content */}
-      <main 
-        className={`transition-all duration-300 min-h-screen ${
-          sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'
-        } pl-0`}
-      >
+      {editingProfile && <ProfileEditModal />}
+      {showRemoveConfirm && <RemoveConfirmModal />}
+
+      <main className={`transition-all duration-300 min-h-screen ${sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'} pl-0`}>
         <div className="pt-[57px]">
           <div className="p-4 md:p-6">
             <Outlet />

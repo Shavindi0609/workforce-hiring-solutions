@@ -85,7 +85,7 @@ const SignIn = () => {
         } else if (profile?.role === 'admin') {
           navigate('/admin/dashboard');
         } else {
-          navigate('/candidate/candidate-dashboard');
+          navigate('/candidate/registration/basic');
         }
       }
       setLoading(false);

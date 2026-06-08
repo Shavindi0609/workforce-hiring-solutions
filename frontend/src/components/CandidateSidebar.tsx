@@ -4,13 +4,11 @@ import { supabase } from '../supabaseClient';
 import {
   LayoutDashboard,
   User,
-  FileText,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Briefcase,
-  Bell,
   Upload,
 } from 'lucide-react';
 

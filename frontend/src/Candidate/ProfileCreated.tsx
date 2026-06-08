@@ -272,7 +272,7 @@ export default function ProfileCreated() {
               Go to Dashboard
             </button>
             <button
-              onClick={() => navigate("/settings")}
+              onClick={() => navigate("/candidate/edit-profile")}
               className="flex-1 border py-4 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition"
             >
               Edit Profile
