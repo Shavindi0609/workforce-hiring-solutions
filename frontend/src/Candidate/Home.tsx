@@ -1,129 +1,102 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Search,
-  Users,
-  Shield,
-  Zap,
-  Award,
-  ArrowRight,
-  Star,
-  MapPin,
-  CheckCircle2,
-  Building2,
-  Clock3,
-  ChevronRight,
-  Phone,
-  Mail,
-  Globe,
+  ArrowRight, CheckCircle2, Star, MapPin, Users, Shield,
+  Zap, Award, ChevronRight, Phone, Mail, Globe,
+  Briefcase, UserCheck, Building2, Clock3,
 } from 'lucide-react';
 
-
-
-// ─── Brand tokens ─────────────────────────────────────────────────────────────
-// Primary navy  : #0b3d6b   Mid navy : #1a5490   Teal bridge : #0e8c7a
-// Brand green   : #2fb852   Dark green: #1f8f3e
-// Off-white bg  : #f4f8fb   Light navy surface: #e8f0f9
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface JobCard   { id:number; company:string; location:string; role:string; tags:string[]; salary:string; logoText:string; logoBg:string; logoText_:string; }
-interface Feature   { icon:React.ReactNode; title:string; desc:string; accent:string; iconBg:string; }
-interface Stat      { num:string; label:string; }
-interface Step      { num:string; title:string; desc:string; }
-interface WhyItem   { title:string; desc:string; }
-interface Testi     { quote:string; name:string; role:string; initials:string; avatarFrom:string; avatarTo:string; }
-interface FooterCol { heading:string; links:string[]; }
+// ─── Brand tokens ──────────────────────────────────────────────────────────────
+// Navy   : #0b3d6b  |  Mid navy : #1a5490  |  Teal : #0e8c7a
+// Green  : #2fb852  |  Dark green : #1f8f3e
+// Off-white: #f4f8fb
 
 // ─── Static data ──────────────────────────────────────────────────────────────
-const JOB_CARDS: JobCard[] = [
-  { id:1, company:'TechCorp Lanka',    location:'Colombo · Remote',  role:'Senior UX Designer',  tags:['Remote','Full-time'],   salary:'LKR 180K – 230K', logoText:'TC', logoBg:'#dbeafe', logoText_:'#1d4ed8' },
-  { id:2, company:'FinServ Global',    location:'Kandy · Hybrid',    role:'Data Analyst',         tags:['Hybrid','3 yrs exp'],   salary:'LKR 150K – 190K', logoText:'FG', logoBg:'#fce7f3', logoText_:'#9d174d' },
-  { id:3, company:'Workforce Solutions', location:'Remote · Global', role:'Backend Engineer',     tags:['Remote','Senior'],      salary:'LKR 250K – 320K', logoText:'WS', logoBg:'#d1fae5', logoText_:'#065f46' },
+
+const STATS = [
+  { num: '5,000+',  label: 'Candidates Placed'       },
+  { num: '300+',    label: 'Partner Companies'        },
+  { num: '98%',     label: 'Client Satisfaction'      },
+  { num: '< 7 days',label: 'Average Time-to-Fill'     },
 ];
 
-const FEATURES: Feature[] = [
-  { icon:<Users size={20}/>,  title:'Talent at Scale',      desc:'50,000+ pre-screened professionals across every domain — ready to hire.',           accent:'#1a5490', iconBg:'#e8f0f9' },
-  { icon:<Shield size={20}/>, title:'Verified Profiles',    desc:'Background-checked, skill-tested, reference-verified. Zero guesswork.',              accent:'#1f8f3e', iconBg:'#dcfce7' },
-  { icon:<Zap size={20}/>,    title:'Hire in 24 Hours',     desc:'AI-powered matching delivers a curated shortlist the same day you post.',            accent:'#0e8c7a', iconBg:'#ccfbf1' },
-  { icon:<Award size={20}/>,  title:'Quality Guarantee',    desc:"Not the right fit? We'll source a replacement — free of charge, no questions asked.", accent:'#7c3aed', iconBg:'#ede9fe' },
+const HOW_STEPS = [
+  {
+    num: '01',
+    icon: <UserCheck size={22} />,
+    title: 'Candidates Register',
+    desc:  'Professionals join our talent pool by completing a detailed profile — skills, experience, availability and salary expectations.',
+    from:  '#0b3d6b', to: '#1a5490',
+  },
+  {
+    num: '02',
+    icon: <Shield size={22} />,
+    title: 'WHS Screens & Verifies',
+    desc:  'Our team personally reviews, interviews and background-checks every candidate before they enter our active pool.',
+    from:  '#0e8c7a', to: '#1f8f3e',
+  },
+  {
+    num: '03',
+    icon: <Building2 size={22} />,
+    title: 'We Match to Companies',
+    desc:  'When a company needs talent, we hand-pick the best-fit candidates from our pool and present them — ready to interview.',
+    from:  '#1f8f3e', to: '#2fb852',
+  },
 ];
 
-const HERO_STATS: Stat[] = [
-  { num:'50K+', label:'Verified Candidates' },
-  { num:'2,400+', label:'Hiring Companies'  },
-  { num:'98%',  label:'Client Satisfaction' },
-  { num:'24 hr', label:'Average Time-to-Hire' },
+const FOR_CANDIDATES = [
+  { icon: '🎯', title: 'Get Discovered',      desc: 'Top companies come to us when they need talent. Your profile puts you in front of the right people.' },
+  { icon: '✅', title: 'Zero Job Hunting',     desc: 'No need to browse listings. We match you to opportunities that fit your skills and expectations.'     },
+  { icon: '🤝', title: 'Personal Support',     desc: 'Our team guides you through every step — from profile setup to offer negotiation.'                   },
+  { icon: '🔒', title: 'Confidential Process', desc: 'Your information is never shared publicly. We only present you to companies with your consent.'       },
 ];
 
-const STEPS: Step[] = [
-  { num:'01', title:'Post Your Role',        desc:'Describe the position in minutes using our smart intake form — we handle the rest.'           },
-  { num:'02', title:'Receive Top Matches',   desc:'Within 24 hours, get a curated shortlist of pre-vetted candidates ranked by fit score.'     },
-  { num:'03', title:'Interview & Hire',      desc:'Schedule, evaluate, and onboard entirely within the platform — with expert support throughout.' },
+const FOR_COMPANIES = [
+  { icon: <UserCheck size={18} />,  title: 'Pre-Vetted Talent',     desc: 'Every candidate is screened, interviewed and reference-checked by our team before you meet them.'  },
+  { icon: <Clock3 size={18} />,     title: 'Fast Turnaround',       desc: 'Receive a curated shortlist within days — not weeks. We do the heavy lifting so you don\'t have to.' },
+  { icon: <Briefcase size={18} />,  title: 'Any Role, Any Level',   desc: 'From entry-level to C-suite, across all industries — we have the depth to fill any position.'       },
+  { icon: <Award size={18} />,      title: 'Quality Guaranteed',    desc: 'Not the right fit? We source a replacement at no additional cost. Your satisfaction is our priority.' },
 ];
 
-const WHY_ITEMS: WhyItem[] = [
-  { title:'Trusted by 2M+ Businesses',          desc:'From early-stage startups to listed enterprises, companies across Sri Lanka depend on us.'           },
-  { title:'Secure End-to-End Payments',          desc:'Milestone-based escrow with full dispute resolution — your money is always protected.'               },
-  { title:'24 / 7 Dedicated Support',            desc:'Reach a real human any time. Our team averages a 4-minute first response.'                          },
-  { title:'Integrated Collaboration Suite',      desc:'Video interviews, scorecards, offer letters, and onboarding checklists — all in one place.'          },
+const TESTIMONIALS = [
+  {
+    quote:    'WHS delivered three exceptional candidates within a week. The screening they do is thorough — every person we interviewed was genuinely the right fit.',
+    name:     'Ashan Kumarasinghe',
+    role:     'CTO — TechCorp Lanka',
+    initials: 'AK',
+    from:     '#2fb852', to: '#0e8c7a',
+  },
+  {
+    quote:    'I registered on a Tuesday. By Friday I had two interview invitations for roles I actually wanted. The process was smooth and completely stress-free.',
+    name:     'Nilmini Perera',
+    role:     'Senior Data Analyst',
+    initials: 'NP',
+    from:     '#1a5490', to: '#2fb852',
+  },
+  {
+    quote:    'As a small business we don\'t have an HR department. WHS acts as our recruitment team — and they\'re better than any agency we\'ve used before.',
+    name:     'Ravin Jayawardena',
+    role:     'Founder — StartupHQ',
+    initials: 'RJ',
+    from:     '#0e8c7a', to: '#0b3d6b',
+  },
 ];
 
-const TESTIMONIALS: Testi[] = [
-  { quote:'We filled a critical engineering role in under 48 hours. The candidate quality was unlike anything we had seen on competing platforms.',       name:'Ashan Kumarasinghe', role:'CTO — TechCorp Lanka',  initials:'AK', avatarFrom:'#2fb852', avatarTo:'#0e8c7a' },
-  { quote:'Pre-vetted profiles cut our screening time by 70%. Every person we interviewed was genuinely qualified and aligned with our culture.',         name:'Nilmini Perera',      role:'HR Director — FinServ Global', initials:'NP', avatarFrom:'#1a5490', avatarTo:'#2fb852' },
-  { quote:"Twelve hires this year, twelve still with us. The support team held our hand the whole way — I can't recommend them highly enough.",           name:'Ravin Jayawardena',   role:'Founder — StartupHQ',          initials:'RJ', avatarFrom:'#0e8c7a', avatarTo:'#0b3d6b' },
+const FOOTER_COLS = [
+  { heading: 'Company',     links: ['About Us','Our Team','Careers','Blog','Contact'] },
+  { heading: 'Candidates',  links: ['Join Talent Pool','How It Works','Career Tips','FAQ'] },
+  { heading: 'Companies',   links: ['Find Talent','Our Process','Industries We Serve','Contact Sales'] },
+  { heading: 'Legal',       links: ['Privacy Policy','Terms of Service','Cookie Policy'] },
 ];
 
-const FOOTER_COLS: FooterCol[] = [
-  { heading:'Company',    links:['About Us','Careers','Blog','Press','Partners']         },
-  { heading:'Employers',  links:['Post a Job','Find Talent','Pricing','Enterprise','API'] },
-  { heading:'Job Seekers',links:['Browse Jobs','My Profile','Salary Guide','Career Tips','Resume Builder'] },
-  { heading:'Support',    links:['Help Center','Contact Us','Status','Community','Legal'] },
+const FIELDS = [
+  'Software Development','UI/UX Design','Data Science','Digital Marketing',
+  'Finance & Accounting','HR & Recruitment','DevOps & Cloud','Sales',
 ];
 
-const TRUSTED = ['DIALOG','HAYLEYS','SLT MOBITEL','CARGILLS','MAS HOLDINGS','JOHN KEELLS'];
-
-// ─── Floating job card ────────────────────────────────────────────────────────
-function JobPill({ card, style }: { card: JobCard; style: React.CSSProperties }) {
-  return (
-    <div
-      className="absolute bg-white rounded-2xl p-4 shadow-[0_8px_40px_rgba(0,0,0,0.18)] border border-white/80"
-      style={style}
-    >
-      <div className="flex items-center gap-3 mb-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-[13px] font-bold flex-shrink-0"
-          style={{ background: card.logoBg, color: card.logoText_ }}
-        >
-          {card.logoText}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-gray-800 truncate">{card.company}</p>
-          <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate">
-            <MapPin size={9} className="flex-shrink-0" /> {card.location}
-          </p>
-        </div>
-      </div>
-      <p className="text-[14px] font-bold text-[#0b3d6b] mb-2 leading-tight">{card.role}</p>
-      <div className="flex gap-1.5 flex-wrap mb-3">
-        {card.tags.map(t => (
-          <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-[#e8f0f9] text-[#1a5490] font-medium">{t}</span>
-        ))}
-      </div>
-      <div className="flex justify-between items-center">
-        <span className="text-[12px] font-bold text-[#1f8f3e]">{card.salary}</span>
-        <button className="text-[11px] px-3 py-1 rounded-lg bg-[#0b3d6b] text-white font-semibold hover:bg-[#1a5490] transition-colors">
-          Apply →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
-  const [searchVal, setSearchVal] = useState('');
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 24);
@@ -134,133 +107,93 @@ export default function Home() {
   return (
     <div className="font-sans text-gray-800 antialiased overflow-x-hidden">
 
-      {/* ════════════════════════════════ NAV ════════════════════════════════ */}
-      <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
-          scrolled
-            ? 'bg-white/95 backdrop-blur-xl shadow-[0_1px_24px_rgba(11,61,107,0.10)] border-b border-gray-100'
-            : 'bg-white/70 backdrop-blur-md'
-        }`}
-      >
+      {/* ══════════════════════════════ NAV ══════════════════════════════════ */}
+      <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${
+        scrolled
+          ? 'bg-white/95 backdrop-blur-xl shadow-[0_1px_24px_rgba(11,61,107,0.10)] border-b border-gray-100'
+          : 'bg-white/70 backdrop-blur-md'
+      }`}>
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-[68px] flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
-        <div className="w-12 h-12 rounded-full  flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow overflow-hidden border border-white">
-            <img 
-            src='assets/logo.png' 
-            alt="Logo" 
-            className="w-full h-full object-cover" 
-            />
-        </div>
-        <span className="font-bold text-[17px] tracking-tight text-[#0b3d6b]">
-            Workforce<span className="text-[#2fb852]">Hiring</span>
-        </span>
-        </Link>
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-11 h-11 rounded-full flex items-center justify-center shadow-md overflow-hidden border border-white/60">
+              <img src="assets/logo.png" alt="WHS Logo" className="w-full h-full object-cover" />
+            </div>
+            <span className="font-bold text-[17px] tracking-tight text-[#0b3d6b]">
+              Workforce<span className="text-[#2fb852]">Hiring</span>
+            </span>
+          </Link>
 
-          {/* Nav links (hidden on mobile) */}
+          {/* Nav */}
           <nav className="hidden md:flex items-center gap-7 text-[14px] font-medium text-gray-600">
-            {['Find Talent','Browse Jobs','Pricing','Resources'].map(l => (
+            {['How It Works','For Candidates','For Companies','About Us'].map(l => (
               <a key={l} href="#" className="hover:text-[#0b3d6b] transition-colors">{l}</a>
             ))}
           </nav>
 
-          {/* Auth buttons */}
+          {/* Auth */}
           <div className="flex items-center gap-2.5">
-            <Link
-              to="/signin"
-              className="hidden sm:inline-flex px-4 py-2 rounded-xl text-[14px] font-semibold text-[#0b3d6b] border border-[#0b3d6b]/30 hover:border-[#0b3d6b] hover:bg-[#0b3d6b]/5 transition-all"
-            >
-              Sign Up
+            <Link to="/signin"
+              className="hidden sm:inline-flex px-4 py-2 rounded-xl text-[14px] font-semibold text-[#0b3d6b] border border-[#0b3d6b]/30 hover:border-[#0b3d6b] hover:bg-[#0b3d6b]/5 transition-all">
+              Sign In
             </Link>
-            <Link
-              to="/signin"
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-[14px] font-semibold text-white bg-gradient-to-r from-[#0b3d6b] to-[#1a5490] hover:from-[#1a5490] hover:to-[#0e8c7a] shadow-md hover:shadow-lg transition-all"
-            >
-              Sign In <ChevronRight size={14} />
+            <Link to="/candidate/registration/basic"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-[14px] font-semibold text-white bg-gradient-to-r from-[#0b3d6b] to-[#1a5490] hover:from-[#1a5490] hover:to-[#0e8c7a] shadow-md hover:shadow-lg transition-all">
+              Join Talent Pool <ChevronRight size={14} />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* ═══════════════════════════════ HERO ════════════════════════════════ */}
+      {/* ══════════════════════════════ HERO ═════════════════════════════════ */}
       <section className="relative min-h-screen flex items-center pt-[68px] bg-[#061e35] overflow-hidden">
-
-        {/* Background texture */}
-        <div
-          className="absolute inset-0 opacity-[0.035]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)',
-            backgroundSize: '72px 72px',
-          }}
-        />
+        {/* Grid texture */}
+        <div className="absolute inset-0 opacity-[0.035]"
+          style={{ backgroundImage:'linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)', backgroundSize:'72px 72px' }} />
         {/* Glow orbs */}
         <div className="absolute top-0 right-0 w-[700px] h-[700px] rounded-full pointer-events-none"
-             style={{ background: 'radial-gradient(circle, rgba(47,184,82,0.09) 0%, transparent 65%)' }} />
+          style={{ background:'radial-gradient(circle, rgba(47,184,82,0.09) 0%, transparent 65%)' }} />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full pointer-events-none"
-             style={{ background: 'radial-gradient(circle, rgba(14,140,122,0.10) 0%, transparent 65%)' }} />
-        {/* Diagonal accent strip */}
-        <div className="absolute right-0 inset-y-0 w-[45%] hidden lg:block"
-             style={{ background: 'linear-gradient(135deg, rgba(26,84,144,0.18) 0%, rgba(14,140,122,0.12) 100%)' }} />
+          style={{ background:'radial-gradient(circle, rgba(14,140,122,0.10) 0%, transparent 65%)' }} />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-10 py-24 grid lg:grid-cols-2 gap-20 items-center">
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 lg:px-10 py-24 grid lg:grid-cols-2 gap-16 items-center">
 
-          {/* ── Left ── */}
+          {/* Left */}
           <div>
-            {/* Eyebrow badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#2fb852]/40 bg-[#2fb852]/10 text-[#5fda7e] text-[12px] font-semibold tracking-wide mb-7">
               <span className="w-1.5 h-1.5 rounded-full bg-[#2fb852] animate-pulse" />
-              Sri Lanka's #1 Talent Marketplace
+              Sri Lanka's Premier Talent Acquisition Partner
             </div>
 
-            <h1 className="text-[clamp(38px,5vw,64px)] font-black text-white leading-[1.07] tracking-tight mb-6">
-              Find the{' '}
+            <h1 className="text-[clamp(36px,4.8vw,62px)] font-black text-white leading-[1.07] tracking-tight mb-6">
+              We Find the{' '}
               <span className="relative inline-block">
                 <span className="relative z-10 text-[#2fb852]">Right Talent</span>
                 <span className="absolute -bottom-1 left-0 right-0 h-[3px] bg-[#2fb852]/40 rounded-full" />
               </span>
-              ,<br />
-              Faster Than Ever.
+              <br />For Your Business.
             </h1>
 
-            <p className="text-[17px] text-white/55 leading-relaxed max-w-[480px] mb-9 font-light">
-              Connect with thousands of pre-vetted professionals. Our intelligent matching
-              platform cuts time-to-hire by up to 70%.
+            <p className="text-[17px] text-white/55 leading-relaxed max-w-[480px] mb-8 font-light">
+              Workforce Hiring Solutions connects companies with pre-screened, interview-ready
+              professionals — so you spend time hiring, not searching.
             </p>
 
-            {/* Search */}
-            <div className="flex bg-white rounded-2xl overflow-hidden shadow-[0_12px_60px_rgba(0,0,0,0.35)] mb-8 ring-1 ring-white/20">
-              <div className="flex items-center pl-5 text-gray-400">
-                <Search size={18} />
-              </div>
-              <input
-                value={searchVal}
-                onChange={e => setSearchVal(e.target.value)}
-                type="text"
-                placeholder='Try "Senior React Developer"'
-                className="flex-1 px-4 py-4 text-[15px] text-gray-700 outline-none placeholder-gray-400 bg-transparent"
-              />
-              <button className="m-1.5 px-7 py-3 rounded-xl bg-gradient-to-r from-[#2fb852] to-[#0e8c7a] text-white text-[14px] font-bold hover:opacity-90 transition-opacity whitespace-nowrap shadow">
-                Find Talent
-              </button>
+            {/* Two audience CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-10">
+              <Link to="/candidate/registration/basic"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-[#2fb852] to-[#0e8c7a] text-white font-bold text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
+                <UserCheck size={18} /> Join as Candidate
+              </Link>
+              <a href="#companies"
+                className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border-2 border-white/20 text-white font-bold text-[15px] hover:bg-white/10 hover:border-white/40 transition-all">
+                <Building2 size={18} /> Hire Through Us
+              </a>
             </div>
 
-            {/* Quick pills */}
-            <div className="flex flex-wrap gap-2 mb-10">
-              <span className="text-[12px] text-white/40 self-center mr-1">Popular:</span>
-              {['Product Manager','DevOps','UI Designer','Data Engineer','Finance Lead'].map(role => (
-                <button
-                  key={role}
-                  onClick={() => setSearchVal(role)}
-                  className="text-[12px] px-3 py-1 rounded-full border border-white/15 text-white/60 hover:border-[#2fb852]/60 hover:text-[#5fda7e] transition-all"
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
-
-            {/* Stats row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
-              {HERO_STATS.map(s => (
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-5">
+              {STATS.map(s => (
                 <div key={s.label}>
                   <p className="text-[22px] font-black text-white leading-none">{s.num}</p>
                   <p className="text-[11px] text-white/40 mt-1 leading-tight">{s.label}</p>
@@ -269,107 +202,69 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── Right — floating cards ── */}
-          <div className="relative h-[480px] hidden lg:block">
-            <style>{`
-              @keyframes f1{0%,100%{transform:rotate(-4deg) translateY(0)}50%{transform:rotate(-4deg) translateY(-12px)}}
-              @keyframes f2{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
-              @keyframes f3{0%,100%{transform:rotate(3deg) translateY(0)}50%{transform:rotate(3deg) translateY(-10px)}}
-            `}</style>
-            <JobPill card={JOB_CARDS[0]} style={{ width:300, left:0,   top:40,  animation:'f1 6s ease-in-out infinite' }} />
-            <JobPill card={JOB_CARDS[1]} style={{ width:285, right:0,  top:110, animation:'f2 7.5s ease-in-out infinite', zIndex:10 }} />
-            <JobPill card={JOB_CARDS[2]} style={{ width:275, left:30,  bottom:20, animation:'f3 8.5s ease-in-out infinite' }} />
-
-            {/* Decorative ring */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full border border-[#2fb852]/10 pointer-events-none" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full border border-[#1a5490]/10 pointer-events-none" />
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════ TRUSTED BY ══════════════════════════════ */}
-      <div className="bg-[#f4f8fb] border-y border-[#dde8f0] py-5 px-6 overflow-hidden">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center gap-x-10 gap-y-3">
-          <span className="text-[11px] font-bold uppercase tracking-[2px] text-gray-400 mr-2">Trusted by</span>
-          {TRUSTED.map(name => (
-            <span key={name} className="text-[13px] font-bold text-gray-400/70 hover:text-[#0b3d6b] transition-colors cursor-default tracking-wide">
-              {name}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* ═══════════════════════════ FEATURES ════════════════════════════════ */}
-      <section className="py-28 px-6 lg:px-10 bg-white">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="max-w-2xl mb-16">
-            <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">What you get</p>
-            <h2 className="text-[clamp(28px,3.2vw,44px)] font-black text-[#061e35] leading-tight mb-4">
-              Everything you need<br />to hire smarter, not harder
-            </h2>
-            <p className="text-[16px] text-gray-500 leading-relaxed font-light">
-              From first search to signed offer — our platform handles every stage of your hiring journey with precision.
-            </p>
-          </div>
-
-          {/* Cards */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.title}
-                className="group relative rounded-2xl border border-gray-100 bg-white p-7 hover:border-transparent hover:shadow-[0_12px_48px_rgba(11,61,107,0.12)] hover:-translate-y-1.5 transition-all duration-300 overflow-hidden"
-              >
-                {/* Top accent bar */}
-                <div
-                  className="absolute top-0 left-6 right-6 h-[2px] rounded-b-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ background: `linear-gradient(90deg, ${f.accent}, transparent)` }}
-                />
-                <div
-                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-5 transition-transform group-hover:scale-110"
-                  style={{ background: f.iconBg, color: f.accent }}
-                >
-                  {f.icon}
-                </div>
-                <h3 className="text-[15px] font-bold text-[#061e35] mb-2">{f.title}</h3>
-                <p className="text-[13px] text-gray-500 leading-relaxed font-light">{f.desc}</p>
+          {/* Right — visual */}
+          <div className="hidden lg:flex flex-col gap-4 items-center">
+            {/* Central badge */}
+            <div className="relative flex items-center justify-center">
+              <div className="w-52 h-52 rounded-full border border-[#2fb852]/20" />
+              <div className="absolute w-36 h-36 rounded-full border border-[#1a5490]/20" />
+              <div className="absolute w-28 h-28 rounded-full bg-gradient-to-br from-[#0b3d6b] to-[#0e8c7a] flex flex-col items-center justify-center shadow-2xl">
+                <img src="assets/logo.png" alt="WHS" className="w-16 h-16 object-contain rounded-full" />
               </div>
-            ))}
+              {/* Orbit items */}
+              {[
+                { label:'5K+ Candidates', top:'-20px', left:'50%', translate:'-50%', bg:'#dbeafe', color:'#1d4ed8' },
+                { label:'300+ Companies',  top:'50%', right:'-90px', translate:'translateY(-50%)', bg:'#dcfce7', color:'#166534' },
+                { label:'98% Satisfaction',bottom:'-20px', left:'50%', translate:'-50%', bg:'#fce7f3', color:'#9d174d' },
+                { label:'< 7 day fill',   top:'50%', left:'-90px', translate:'translateY(-50%)', bg:'#fef9c3', color:'#854d0e' },
+              ].map((o, i) => (
+                <div key={i}
+                  className="absolute text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md whitespace-nowrap"
+                  style={{ background: o.bg, color: o.color, top: o.top, left: o.left, right: (o as any).right, bottom: (o as any).bottom, transform: o.translate.startsWith('translateY') ? o.translate : `translateX(${o.translate})` }}
+                >
+                  {o.label}
+                </div>
+              ))}
+            </div>
+
+            {/* Fields we cover */}
+            <div className="mt-8 bg-white/[0.07] border border-white/10 rounded-2xl p-5 w-full max-w-sm">
+              <p className="text-[11px] font-bold uppercase tracking-[2px] text-white/40 mb-3">Fields we cover</p>
+              <div className="flex flex-wrap gap-2">
+                {FIELDS.map(f => (
+                  <span key={f} className="text-[11px] px-2.5 py-1 rounded-full border border-white/15 text-white/60">{f}</span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ════════════════════════ HOW IT WORKS ═══════════════════════════════ */}
-      <section className="py-28 px-6 lg:px-10 bg-[#f4f8fb] relative overflow-hidden">
-        {/* Decorative large number bg */}
-        <div className="absolute right-0 top-10 text-[180px] font-black text-[#0b3d6b]/[0.03] select-none pointer-events-none leading-none">
-          HOW
-        </div>
-
+      <section id="how" className="py-28 px-6 lg:px-10 bg-[#f4f8fb] relative overflow-hidden">
+        <div className="absolute right-0 top-10 text-[160px] font-black text-[#0b3d6b]/[0.03] select-none pointer-events-none leading-none">WHS</div>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-xl mb-16">
-            <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">How it works</p>
-            <h2 className="text-[clamp(28px,3.2vw,44px)] font-black text-[#061e35] leading-tight mb-4">
-              Three steps to your<br />next great hire
+            <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">The WHS Process</p>
+            <h2 className="text-[clamp(26px,3vw,42px)] font-black text-[#061e35] leading-tight mb-4">
+              How we connect talent<br />with opportunity
             </h2>
             <p className="text-[16px] text-gray-500 leading-relaxed font-light">
-              We've stripped away the complexity. Great hiring should take days, not months.
+              We manage the entire recruitment pipeline — from candidate discovery to final placement.
+              Companies get vetted talent. Candidates get matched opportunities.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 relative">
-            {/* Dashed connector */}
             <div className="hidden md:block absolute top-[28px] left-[calc(16.67%+28px)] right-[calc(16.67%+28px)] h-px border-t-2 border-dashed border-[#0b3d6b]/20 z-0" />
-
-            {STEPS.map((s, i) => (
+            {HOW_STEPS.map((s, i) => (
               <div key={s.num} className="relative z-10 group">
-                {/* Step bubble */}
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg"
-                     style={{ background: `linear-gradient(135deg, #0b3d6b ${i===0?'':'30%'}, ${i===0?'#1a5490':i===1?'#0e8c7a':'#2fb852'})` }}>
-                  <span className="text-white font-black text-[15px] tracking-tighter">{s.num}</span>
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 text-white shadow-md group-hover:scale-105 transition-transform"
+                  style={{ background: `linear-gradient(135deg, ${s.from}, ${s.to})` }}>
+                  {s.icon}
                 </div>
-                {/* Card */}
-                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm group-hover:shadow-md group-hover:border-[#0b3d6b]/20 transition-all duration-300">
+                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm group-hover:shadow-md group-hover:border-[#0b3d6b]/20 transition-all">
+                  <span className="text-[11px] font-black text-[#0b3d6b]/30 tracking-widest mb-2 block">{s.num}</span>
                   <h3 className="text-[16px] font-bold text-[#061e35] mb-2">{s.title}</h3>
                   <p className="text-[13px] text-gray-500 leading-relaxed font-light">{s.desc}</p>
                 </div>
@@ -379,123 +274,160 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ════════════════════════ WHY CHOOSE US ══════════════════════════════ */}
-      <section className="py-28 px-6 lg:px-10 bg-white">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 xl:gap-24 items-center">
+      {/* ════════════════════════ FOR CANDIDATES ═════════════════════════════ */}
+      <section id="candidates" className="py-28 px-6 lg:px-10 bg-white">
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
 
-          {/* ── Metric panel ── */}
-          <div className="relative">
-            <div className="rounded-3xl overflow-hidden bg-gradient-to-br from-[#061e35] via-[#0b3d6b] to-[#0e4a3a] p-10 lg:p-12 min-h-[440px] flex flex-col justify-between shadow-[0_24px_80px_rgba(6,30,53,0.45)]">
-              {/* Inner glow */}
-              <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full pointer-events-none"
-                   style={{ background: 'radial-gradient(circle, rgba(47,184,82,0.15) 0%, transparent 65%)' }} />
-
-              <div className="relative z-10">
-                <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#5fda7e] mb-4">Our Impact</p>
-                <p className="font-black text-white leading-none mb-2" style={{ fontSize: 'clamp(52px,6vw,80px)' }}>
-                  2M<span className="text-[#2fb852]">+</span>
-                </p>
-                <p className="text-white/45 text-[14px]">Professionals placed worldwide</p>
-              </div>
-
-              <div className="relative z-10 grid grid-cols-3 gap-6 pt-8 border-t border-white/10">
-                {[
-                  { num:'98%',  label:'Satisfaction'      },
-                  { num:'24hr', label:'Avg Time-to-Hire'  },
-                  { num:'4.9',  label:'App Store Rating'  },
-                ].map(m => (
-                  <div key={m.label}>
-                    <p className="font-black text-white text-[28px] leading-none">{m.num}</p>
-                    <p className="text-white/40 text-[11px] mt-1 leading-tight">{m.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Floating badge */}
-            <div className="absolute -top-4 -right-4 bg-[#2fb852] rounded-2xl px-4 py-3 shadow-xl shadow-green-500/25">
-              <p className="text-white font-black text-[20px] leading-none">★ 4.9</p>
-              <p className="text-white/80 text-[10px] font-semibold">Trustpilot</p>
-            </div>
-          </div>
-
-          {/* ── Content ── */}
+          {/* Left — content */}
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">Why choose us</p>
-            <h2 className="text-[clamp(26px,3vw,42px)] font-black text-[#061e35] leading-tight mb-8">
-              Built for businesses<br />that can't afford a<br />
-              <span className="text-[#0b3d6b]">wrong hire</span>
+            <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">For Candidates</p>
+            <h2 className="text-[clamp(26px,3vw,42px)] font-black text-[#061e35] leading-tight mb-5">
+              Let us find the right<br />
+              <span className="text-[#0b3d6b]">job for you</span>
             </h2>
+            <p className="text-[15px] text-gray-500 leading-relaxed mb-8 font-light">
+              Stop sending CVs into the void. Join our talent pool once and let WHS match you
+              to companies that are actively looking for someone like you.
+            </p>
 
-            <ul className="space-y-6 mb-10">
-              {WHY_ITEMS.map(item => (
+            <ul className="space-y-5 mb-10">
+              {FOR_CANDIDATES.map(item => (
                 <li key={item.title} className="flex gap-4 group">
-                  <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-full bg-[#dcfce7] flex items-center justify-center group-hover:bg-[#2fb852] transition-colors">
-                    <CheckCircle2 size={14} className="text-[#1f8f3e] group-hover:text-white transition-colors" />
+                  <div className="w-10 h-10 rounded-xl bg-[#f4f8fb] flex items-center justify-center text-[18px] flex-shrink-0 group-hover:scale-110 transition-transform">
+                    {item.icon}
                   </div>
                   <div>
-                    <h4 className="text-[15px] font-bold text-[#061e35] mb-1">{item.title}</h4>
+                    <h4 className="text-[14px] font-bold text-[#061e35] mb-0.5">{item.title}</h4>
                     <p className="text-[13px] text-gray-500 leading-relaxed font-light">{item.desc}</p>
                   </div>
                 </li>
               ))}
             </ul>
 
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/signin"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-[14px] font-bold text-white bg-gradient-to-r from-[#0b3d6b] to-[#0e8c7a] shadow-lg shadow-blue-900/25 hover:shadow-xl hover:shadow-blue-900/35 hover:-translate-y-0.5 transition-all"
-              >
-                Get Started Free <ArrowRight size={15} />
-              </Link>
-              <button className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-[14px] font-bold text-[#0b3d6b] border-2 border-[#0b3d6b]/25 hover:border-[#0b3d6b] hover:bg-[#0b3d6b]/5 transition-all">
-                Watch Demo <span className="text-[16px]">▶</span>
-              </button>
+            <Link to="/candidate/registration/basic"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-[14px] font-bold text-white bg-gradient-to-r from-[#0b3d6b] to-[#0e8c7a] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
+              Register as a Candidate <ArrowRight size={15} />
+            </Link>
+            <p className="text-[12px] text-gray-400 mt-3">Free to join · No commitment · Confidential</p>
+          </div>
+
+          {/* Right — visual card */}
+          <div className="relative">
+            <div className="rounded-3xl bg-gradient-to-br from-[#061e35] via-[#0b3d6b] to-[#0e4a3a] p-8 lg:p-10 shadow-[0_24px_80px_rgba(6,30,53,0.35)]">
+              <div className="absolute -top-3 -right-3 bg-[#2fb852] rounded-2xl px-4 py-2.5 shadow-xl shadow-green-500/25">
+                <p className="text-white font-black text-[18px] leading-none">Free</p>
+                <p className="text-white/80 text-[10px] font-semibold">to register</p>
+              </div>
+
+              <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#5fda7e] mb-5">What you get</p>
+              <div className="space-y-3">
+                {[
+                  'Access to 300+ hiring companies',
+                  'Personal talent manager assigned to you',
+                  'Interview coaching and CV review',
+                  'Salary benchmarking insights',
+                  'Confidential profile — only shared with consent',
+                  'Zero cost to candidates, ever',
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <CheckCircle2 size={15} className="text-[#2fb852] flex-shrink-0" />
+                    <span className="text-[13px] text-white/75 font-light">{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-white/10 grid grid-cols-3 gap-4">
+                {[{ num:'5K+', label:'Active Candidates' }, { num:'300+', label:'Partner Cos.' }, { num:'92%', label:'Placement Rate' }].map(m => (
+                  <div key={m.label}>
+                    <p className="font-black text-white text-[22px] leading-none">{m.num}</p>
+                    <p className="text-white/40 text-[10px] mt-1 leading-tight">{m.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ════════════════════════ FOR COMPANIES ══════════════════════════════ */}
+      <section id="companies" className="py-28 px-6 lg:px-10 bg-[#f4f8fb]">
+        <div className="max-w-7xl mx-auto">
+          <div className="max-w-2xl mb-14">
+            <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">For Companies</p>
+            <h2 className="text-[clamp(26px,3vw,42px)] font-black text-[#061e35] leading-tight mb-4">
+              Stop searching. Start hiring.
+            </h2>
+            <p className="text-[16px] text-gray-500 leading-relaxed font-light">
+              Tell us what you need. We present you with pre-vetted, interview-ready candidates —
+              typically within 3–7 business days. No job boards. No screening. No wasted time.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+            {FOR_COMPANIES.map(f => (
+              <div key={f.title}
+                className="group bg-white rounded-2xl border border-gray-100 p-6 hover:border-[#0b3d6b]/20 hover:shadow-[0_12px_40px_rgba(11,61,107,0.10)] hover:-translate-y-1 transition-all duration-300">
+                <div className="w-10 h-10 rounded-xl bg-[#e8f0f9] text-[#0b3d6b] flex items-center justify-center mb-4 group-hover:bg-[#0b3d6b] group-hover:text-white transition-all">
+                  {f.icon}
+                </div>
+                <h3 className="text-[15px] font-bold text-[#061e35] mb-2">{f.title}</h3>
+                <p className="text-[13px] text-gray-500 leading-relaxed font-light">{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Contact CTA */}
+          <div className="bg-gradient-to-r from-[#0b3d6b] to-[#0e8c7a] rounded-3xl p-8 lg:p-10 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl">
+            <div>
+              <h3 className="text-[20px] font-black text-white mb-2">Ready to find your next great hire?</h3>
+              <p className="text-[14px] text-white/60 font-light">Speak to our team and get a curated shortlist within days.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+              <a href="mailto:hire@workforcehs.com"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-[#0b3d6b] text-[14px] font-bold hover:bg-gray-50 transition whitespace-nowrap">
+                <Mail size={15} /> Email Us
+              </a>
+              <a href="tel:+94112345678"
+                className="flex items-center gap-2 px-6 py-3 rounded-xl border-2 border-white/30 text-white text-[14px] font-bold hover:bg-white/10 transition whitespace-nowrap">
+                <Phone size={15} /> Call Us
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ════════════════════════ TESTIMONIALS ═══════════════════════════════ */}
       <section className="py-28 px-6 lg:px-10 bg-[#061e35] relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]"
-             style={{ backgroundImage:'linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)', backgroundSize:'60px 60px' }} />
+          style={{ backgroundImage:'linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)', backgroundSize:'60px 60px' }} />
         <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full pointer-events-none"
-             style={{ background:'radial-gradient(circle, rgba(47,184,82,0.07) 0%, transparent 65%)' }} />
+          style={{ background:'radial-gradient(circle, rgba(47,184,82,0.07) 0%, transparent 65%)' }} />
 
         <div className="relative z-10 max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-14">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#5fda7e] mb-3">Client Stories</p>
-              <h2 className="text-[clamp(28px,3.2vw,44px)] font-black text-white leading-tight">
-                Trusted by industry<br />leaders across Sri Lanka
+              <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#5fda7e] mb-3">What People Say</p>
+              <h2 className="text-[clamp(26px,3vw,42px)] font-black text-white leading-tight">
+                Trusted by candidates<br />and companies alike
               </h2>
             </div>
-            <button className="self-start md:self-auto inline-flex items-center gap-2 text-[13px] font-semibold text-[#5fda7e] border border-[#2fb852]/30 px-4 py-2 rounded-xl hover:bg-[#2fb852]/10 transition-colors whitespace-nowrap">
-              Read All Stories <ArrowRight size={14} />
-            </button>
           </div>
 
           <div className="grid md:grid-cols-3 gap-5">
             {TESTIMONIALS.map(t => (
-              <div
-                key={t.name}
-                className="group relative bg-white/[0.06] border border-white/10 rounded-2xl p-7 hover:bg-white/[0.10] hover:border-white/20 transition-all duration-300 overflow-hidden"
-              >
+              <div key={t.name}
+                className="group bg-white/[0.06] border border-white/10 rounded-2xl p-7 hover:bg-white/[0.10] hover:border-white/20 transition-all duration-300 relative overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <div className="flex gap-0.5 mb-5">
                   {Array(5).fill(null).map((_, i) => (
                     <Star key={i} size={13} className="fill-[#2fb852] text-[#2fb852]" />
                   ))}
                 </div>
-                <p className="text-[14px] text-white/70 leading-[1.8] mb-6 font-light">
-                  "{t.quote}"
-                </p>
+                <p className="text-[14px] text-white/70 leading-[1.8] mb-6 font-light">"{t.quote}"</p>
                 <div className="flex items-center gap-3 pt-5 border-t border-white/10">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[12px] font-black flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${t.avatarFrom}, ${t.avatarTo})` }}
+                    style={{ background: `linear-gradient(135deg, ${t.from}, ${t.to})` }}
                   >
                     {t.initials}
                   </div>
@@ -510,58 +442,54 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══════════════════════ CTA BANNER ══════════════════════════════════ */}
+      {/* ═══════════════════════ FINAL CTA ═══════════════════════════════════ */}
       <section className="relative py-24 px-6 lg:px-10 text-center overflow-hidden"
-               style={{ background:'linear-gradient(135deg, #1f8f3e 0%, #0e8c7a 50%, #0b3d6b 100%)' }}>
+        style={{ background:'linear-gradient(135deg, #1f8f3e 0%, #0e8c7a 50%, #0b3d6b 100%)' }}>
         <div className="absolute inset-0 opacity-[0.06]"
-             style={{ backgroundImage:'linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)', backgroundSize:'50px 50px' }} />
+          style={{ backgroundImage:'linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)', backgroundSize:'50px 50px' }} />
         <div className="relative z-10 max-w-3xl mx-auto">
-          <p className="text-[11px] font-bold uppercase tracking-[3px] text-white/60 mb-4">Start Today</p>
-          <h2 className="text-[clamp(30px,4vw,52px)] font-black text-white leading-tight mb-5">
-            Ready to build your<br />dream team?
+          <p className="text-[11px] font-bold uppercase tracking-[3px] text-white/60 mb-4">Get Started Today</p>
+          <h2 className="text-[clamp(28px,4vw,50px)] font-black text-white leading-tight mb-5">
+            Are you ready to take<br />the next step?
           </h2>
-          <p className="text-[17px] text-white/70 mb-10 font-light">
-            Join 2,400+ companies already hiring smarter on Workforce Hiring Solutions.
+          <p className="text-[16px] text-white/70 mb-10 font-light">
+            Whether you're a professional looking for your next role or a company in need of great talent —
+            WHS is here to make it happen.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Link
-              to="/signup"
-              className="px-8 py-4 rounded-xl bg-white text-[#0b3d6b] text-[15px] font-black hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all"
-            >
-              Post a Job — It's Free
+            <Link to="/candidate/registration/basic"
+              className="px-8 py-4 rounded-xl bg-white text-[#0b3d6b] text-[15px] font-black hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all">
+              Join as a Candidate
             </Link>
-            <button className="px-8 py-4 rounded-xl border-2 border-white/40 text-white text-[15px] font-bold hover:bg-white/10 hover:border-white/70 transition-all">
-              Browse Talent →
-            </button>
+            <a href="mailto:hire@workforcehs.com"
+              className="px-8 py-4 rounded-xl border-2 border-white/40 text-white text-[15px] font-bold hover:bg-white/10 hover:border-white/70 transition-all">
+              Contact Our Team →
+            </a>
           </div>
-          <p className="text-[12px] text-white/40 mt-6">No credit card required · Cancel any time</p>
+          <p className="text-[12px] text-white/40 mt-6">Candidate registration is free · No obligation</p>
         </div>
       </section>
 
-      {/* ═══════════════════════════ FOOTER ══════════════════════════════════ */}
+      {/* ══════════════════════════ FOOTER ═══════════════════════════════════ */}
       <footer className="bg-[#04111e] pt-16 pb-8 px-6 lg:px-10">
         <div className="max-w-7xl mx-auto">
-
-          {/* Top row */}
-          <div className="grid md:grid-cols-6 gap-10 mb-12 pb-12 border-b border-white/[0.07]">
+          <div className="grid md:grid-cols-5 gap-10 mb-12 pb-12 border-b border-white/[0.07]">
             {/* Brand */}
-            <div className="md:col-span-2">
+            <div className="md:col-span-1">
               <div className="flex items-center gap-2.5 mb-5">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b3d6b] to-[#2fb852] flex items-center justify-center shadow">
-                  <span className="text-white font-black text-[14px]">W</span>
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20">
+                  <img src="assets/logo.png" alt="WHS" className="w-full h-full object-cover" />
                 </div>
-                <span className="text-white font-bold text-[16px]">
-                  Workforce<span className="text-[#2fb852]">Hiring</span>
-                </span>
+                <span className="text-white font-bold text-[15px]">Workforce<span className="text-[#2fb852]">Hiring</span></span>
               </div>
-              <p className="text-[13px] text-white/35 leading-relaxed mb-6 max-w-[220px] font-light">
-                Sri Lanka's most trusted talent marketplace. Connecting great companies with exceptional professionals since 2018.
+              <p className="text-[12px] text-white/30 leading-relaxed mb-5 font-light">
+                Sri Lanka's most trusted talent acquisition partner — connecting professionals with opportunities since 2018.
               </p>
-              {/* Social icons */}
-              <div className="flex gap-3">
-                {[Star, Globe].map((Icon, i) => (
-                  <button key={i} className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-white/40 hover:text-[#2fb852] hover:border-[#2fb852]/40 transition-all">
-                    <Icon size={14} />
+              <div className="flex gap-2">
+                {[Mail, Phone, Globe].map((Icon, i) => (
+                  <button key={i}
+                    className="w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center text-white/40 hover:text-[#2fb852] hover:border-[#2fb852]/40 transition-all">
+                    <Icon size={13} />
                   </button>
                 ))}
               </div>
@@ -574,7 +502,7 @@ export default function Home() {
                 <ul className="space-y-2.5">
                   {col.links.map(link => (
                     <li key={link}
-                        className="text-[13px] text-white/35 hover:text-[#2fb852] cursor-pointer transition-colors font-light">
+                      className="text-[12px] text-white/30 hover:text-[#2fb852] cursor-pointer transition-colors font-light">
                       {link}
                     </li>
                   ))}
@@ -583,8 +511,7 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Bottom row */}
-          <div className="flex flex-wrap justify-between items-center gap-4 text-[12px] text-white/25">
+          <div className="flex flex-wrap justify-between items-center gap-4 text-[12px] text-white/20">
             <span>© 2026 Workforce Hiring Solutions (Pvt) Ltd. All rights reserved.</span>
             <div className="flex gap-5">
               {['Privacy Policy','Terms of Service','Cookie Policy'].map(l => (
@@ -594,7 +521,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
     </div>
   );
 }
