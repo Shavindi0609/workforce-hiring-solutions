@@ -5,6 +5,7 @@ import {
   Zap, Award, ChevronRight, Phone, Mail, Globe,
   Briefcase, UserCheck, Building2, Clock3,
 } from 'lucide-react';
+import logo from '../assets/logo.png'
 
 // ─── Brand tokens ──────────────────────────────────────────────────────────────
 // Navy   : #0b3d6b  |  Mid navy : #1a5490  |  Teal : #0e8c7a
@@ -117,7 +118,7 @@ export default function Home() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-11 h-11 rounded-full flex items-center justify-center shadow-md overflow-hidden border border-white/60">
-              <img src="assets/logo.png" alt="WHS Logo" className="w-full h-full object-cover" />
+              <img src={logo} alt="WHS Logo" className="w-full h-full object-cover" />
             </div>
             <span className="font-bold text-[17px] tracking-tight text-[#0b3d6b]">
               Workforce<span className="text-[#2fb852]">Hiring</span>
@@ -209,7 +210,7 @@ export default function Home() {
               <div className="w-52 h-52 rounded-full border border-[#2fb852]/20" />
               <div className="absolute w-36 h-36 rounded-full border border-[#1a5490]/20" />
               <div className="absolute w-28 h-28 rounded-full bg-gradient-to-br from-[#0b3d6b] to-[#0e8c7a] flex flex-col items-center justify-center shadow-2xl">
-                <img src="assets/logo.png" alt="WHS" className="w-16 h-16 object-contain rounded-full" />
+                <img src={logo} alt="WHS" className="w-16 h-16 object-contain rounded-full" />
               </div>
               {/* Orbit items */}
               {[
@@ -478,7 +479,7 @@ export default function Home() {
             <div className="md:col-span-1">
               <div className="flex items-center gap-2.5 mb-5">
                 <div className="w-9 h-9 rounded-full overflow-hidden border border-white/20">
-                  <img src="assets/logo.png" alt="WHS" className="w-full h-full object-cover" />
+                  <img src={logo} alt="WHS" className="w-full h-full object-cover" />
                 </div>
                 <span className="text-white font-bold text-[15px]">Workforce<span className="text-[#2fb852]">Hiring</span></span>
               </div>
