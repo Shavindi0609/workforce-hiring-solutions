@@ -150,11 +150,11 @@ export default function Home() {
           {/* Auth */}
           <div className="flex items-center gap-2.5">
             <Link to="/signin"
-              className="hidden sm:inline-flex px-4 py-2 rounded-xl text-[14px] font-semibold text-[#0b3d6b] border border-[#0b3d6b]/30 hover:border-[#0b3d6b] hover:bg-[#0b3d6b]/5 transition-all">
+              className=" inline-flex px-4 py-2 rounded-xl text-[14px] font-semibold text-[#0b3d6b] border border-[#0b3d6b]/30 hover:border-[#0b3d6b] hover:bg-[#0b3d6b]/5 transition-all">
               Sign In
             </Link>
             <Link to="/candidate/registration/basic"
-              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-[14px] font-semibold text-white bg-gradient-to-r from-[#0b3d6b] to-[#1a5490] hover:from-[#1a5490] hover:to-[#0e8c7a] shadow-md hover:shadow-lg transition-all">
+              className=" hidden sm:inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-[14px] font-semibold text-white bg-gradient-to-r from-[#0b3d6b] to-[#1a5490] hover:from-[#1a5490] hover:to-[#0e8c7a] shadow-md hover:shadow-lg transition-all">
               Join Talent Pool <ChevronRight size={14} />
             </Link>
           </div>

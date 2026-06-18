@@ -1,4 +1,3 @@
-// src/Admin/Skills.tsx
 import { useState } from 'react';
 import { Search, Edit2, Trash2, MoreVertical, Plus, Award, TrendingUp, Archive, Filter } from 'lucide-react';
 import { useSkills } from '../hooks/useSkills';
@@ -80,30 +79,29 @@ export default function Skills() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8">
-            {/* Header Section */}
-            <div className="flex justify-between items-center mb-8">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+            {/* Header Section - Responsive */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold">Skills</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold">Skills</h1>
                     <p className="text-sm text-gray-500">Manage candidate skills</p>
                 </div>
-                <div className="flex gap-3">
-                    <button 
-                        onClick={handleAddSkill}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
-                    >
-                        <Plus size={16} /> Add Skill
-                    </button>
-                </div>
+                <button 
+                    onClick={handleAddSkill}
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+                >
+                    <Plus size={16} /> <span className="hidden sm:inline">Add Skill</span>
+                    <span className="sm:hidden">Add</span>
+                </button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-8 mb-8">
+            {/* Stats Cards - Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
                 <StatCard
                     title="Total Skills" 
                     value={stats.total.toString()} 
                     sub="100% of total" 
-                    icon={<Award size={28} className="text-blue-500" />}
+                    icon={<Award size={24} className="text-blue-500" />}
                     bgColor="bg-blue-50"
                 />
                 <StatCard 
@@ -111,7 +109,7 @@ export default function Skills() {
                     value={stats.active.toString()} 
                     sub={`${stats.activePercentage.toFixed(1)}% of total`} 
                     color="text-green-600"
-                    icon={<TrendingUp size={28} className="text-green-500" />}
+                    icon={<TrendingUp size={24} className="text-green-500" />}
                     bgColor="bg-green-50"
                 />
                 <StatCard 
@@ -119,113 +117,129 @@ export default function Skills() {
                     value={stats.inactive.toString()} 
                     sub={`${stats.inactivePercentage.toFixed(1)}% of total`} 
                     color="text-orange-500"
-                    icon={<Archive size={28} className="text-orange-500" />}
+                    icon={<Archive size={24} className="text-orange-500" />}
                     bgColor="bg-orange-50"
                 />
             </div>
 
-            {/* Search and Filters Section */}
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 mb-6 flex flex-wrap items-center gap-4">
-                <div className="relative flex-grow min-w-[250px]">
-                    <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search by skill name or field..." 
-                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+            {/* Search and Filters Section - Responsive */}
+            <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 mb-6">
+                <div className="flex flex-col gap-3 sm:gap-4">
+                    <div className="relative flex-grow">
+                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Search by skill name or field..." 
+                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
+                        <select 
+                            className="px-3 sm:px-4 py-2 border rounded-xl text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={fieldFilter}
+                            onChange={(e) => setFieldFilter(e.target.value)}
+                        >
+                            {uniqueFields.map(field => (
+                                <option key={field} value={field}>{field === 'All' ? 'All Fields' : field}</option>
+                            ))}
+                        </select>
+
+                        <select 
+                            className="px-3 sm:px-4 py-2 border rounded-xl text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="All">All Status</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+
+                        <button 
+                            onClick={handleApplyFilters}
+                            className="col-span-1 sm:flex-none bg-blue-600 text-white px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                        >
+                            Apply
+                        </button>
+
+                        <button 
+                            onClick={handleClearFilters}
+                            className="col-span-1 sm:flex-none bg-white text-gray-600 px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors border border-gray-200 flex items-center justify-center gap-2"
+                        >
+                            <Filter size={16} /> <span className="hidden sm:inline">Clear</span>
+                        </button>
+                    </div>
                 </div>
-                
-                <select 
-                    className="px-4 py-2 border rounded-xl text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={fieldFilter}
-                    onChange={(e) => setFieldFilter(e.target.value)}
-                >
-                    {uniqueFields.map(field => (
-                        <option key={field} value={field}>{field === 'All' ? 'All Fields' : field}</option>
-                    ))}
-                </select>
-
-                <select 
-                    className="px-4 py-2 border rounded-xl text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                    <option value="All">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                </select>
-
-                <button 
-                    onClick={handleApplyFilters}
-                    className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
-                >
-                    Apply Filters
-                </button>
-
-                <button 
-                    onClick={handleClearFilters}
-                    className="bg-white text-gray-600 px-5 py-2 rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors border border-gray-200 flex items-center gap-2"
-                >
-                    <Filter size={16} /> Clear
-                </button>
             </div>
 
-            {/* Skills Table */}
+            {/* Skills Table - Horizontally scrollable on mobile */}
             <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="text-gray-400 text-xs uppercase border-b bg-gray-50">
-                            <th className="p-4 w-12 text-center">#</th>
-                            <th className="p-4">Skill Name</th>
-                            <th className="p-4">Field</th>
-                            <th className="p-4 text-center">Candidates</th>
-                            <th className="p-4 text-center">Status</th>
-                            <th className="p-4 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                        {filteredSkills.map((skill, index) => (
-                            <tr key={skill.id} className="border-b hover:bg-gray-50 transition-colors">
-                                <td className="p-4 text-center text-gray-700 font-medium">{index + 1}</td>
-                                <td className="p-4 font-medium text-gray-900">{skill.name}</td>
-                                <td className="p-4 text-gray-500">{skill.field}</td>
-                                <td className="p-4 text-center font-medium">{skill.candidates_count.toLocaleString()}</td>
-                                <td className="p-4 text-center">
-                                    <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium ${
-                                        skill.status === 'Active' 
-                                            ? 'bg-green-100 text-green-700' 
-                                            : 'bg-gray-100 text-gray-500'
-                                    }`}>
-                                        {skill.status}
-                                    </span>
-                                </td>
-                                <td className="p-4">
-                                    <div className="flex items-center justify-center gap-2">
-                                        <button 
-                                            onClick={() => handleEditSkill(skill)}
-                                            className="p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
-                                            title="Edit"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteSkill(skill.id)}
-                                            className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                        <button className="p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors" title="More">
-                                            <MoreVertical size={16} />
-                                        </button>
-                                    </div>
-                                </td>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px] lg:min-w-full">
+                        <thead>
+                            <tr className="text-gray-400 text-xs uppercase border-b bg-gray-50">
+                                <th className="p-3 sm:p-4 w-12 text-center">#</th>
+                                <th className="p-3 sm:p-4">Skill Name</th>
+                                <th className="p-3 sm:p-4 hidden sm:table-cell">Field</th>
+                                <th className="p-3 sm:p-4 text-center hidden md:table-cell">Candidates</th>
+                                <th className="p-3 sm:p-4 text-center">Status</th>
+                                <th className="p-3 sm:p-4 text-center">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="text-sm">
+                            {filteredSkills.map((skill, index) => (
+                                <tr key={skill.id} className="border-b hover:bg-gray-50 transition-colors">
+                                    <td className="p-3 sm:p-4 text-center text-gray-700 font-medium">{index + 1}</td>
+                                    <td className="p-3 sm:p-4 font-medium text-gray-900">
+                                        <div className="min-w-[80px]">
+                                            <p className="truncate">{skill.name}</p>
+                                            <p className="text-xs text-gray-400 sm:hidden truncate">{skill.field}</p>
+                                        </div>
+                                    </td>
+                                    <td className="p-3 sm:p-4 text-gray-500 hidden sm:table-cell">
+                                        <div className="max-w-[150px] truncate">{skill.field}</div>
+                                    </td>
+                                    <td className="p-3 sm:p-4 text-center font-medium hidden md:table-cell">{skill.candidates_count.toLocaleString()}</td>
+                                    <td className="p-3 sm:p-4 text-center">
+                                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${
+                                            skill.status === 'Active' 
+                                                ? 'bg-green-100 text-green-700' 
+                                                : 'bg-gray-100 text-gray-500'
+                                        }`}>
+                                            {skill.status}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 sm:p-4">
+                                        <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                            <button 
+                                                onClick={() => handleEditSkill(skill)}
+                                                className="p-1.5 sm:p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteSkill(skill.id)}
+                                                className="p-1.5 sm:p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                            <button 
+                                                className="p-1.5 sm:p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors" 
+                                                title="More"
+                                            >
+                                                <MoreVertical size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
                 
                 {filteredSkills.length === 0 && (
                     <div className="text-center py-12">
@@ -233,15 +247,15 @@ export default function Skills() {
                     </div>
                 )}
 
-                {/* Pagination Footer */}
-                <div className="px-6 py-4 border-t flex items-center justify-between text-sm text-gray-500 bg-gray-50">
-                    <p>Showing {filteredSkills.length} of {skills.length} skills</p>
+                {/* Pagination Footer - Responsive */}
+                <div className="px-4 sm:px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 bg-gray-50">
+                    <p className="text-xs sm:text-sm">Showing {filteredSkills.length} of {skills.length} skills</p>
                     <div className="flex gap-2">
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors disabled:opacity-50" disabled>Previous</button>
-                        <button className="px-3 py-1 bg-blue-600 text-white rounded-md">1</button>
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors">2</button>
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors">3</button>
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors">Next</button>
+                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors disabled:opacity-50 text-xs sm:text-sm" disabled>Previous</button>
+                        <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs sm:text-sm">1</button>
+                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors text-xs sm:text-sm">2</button>
+                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors text-xs sm:text-sm">3</button>
+                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors text-xs sm:text-sm">Next</button>
                     </div>
                 </div>
             </div>
@@ -266,17 +280,17 @@ const StatCard = ({ title, value, sub, color = "text-gray-900", icon, bgColor = 
     icon?: React.ReactNode; 
     bgColor?: string;
 }) => (
-    <div className="bg-white p-6 rounded-2xl border shadow-sm transition-all hover:shadow-md">
-        <div className="flex items-start gap-4">
+    <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-sm transition-all hover:shadow-md">
+        <div className="flex items-start gap-3 sm:gap-4">
             {icon && (
-                <div className={`p-3 rounded-xl ${bgColor}`}>
+                <div className={`p-2 sm:p-3 rounded-xl ${bgColor} flex-shrink-0`}>
                     {icon}
                 </div>
             )}
-            <div className="flex-1">
-                <p className="text-gray-400 text-xs uppercase tracking-wider">{title}</p>
-                <h3 className={`text-3xl font-bold ${color} mt-2`}>{value}</h3>
-                <p className="text-xs text-gray-400 mt-1">{sub}</p>
+            <div className="flex-1 min-w-0">
+                <p className="text-gray-400 text-[10px] sm:text-xs uppercase tracking-wider">{title}</p>
+                <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold ${color} mt-1 sm:mt-2 truncate`}>{value}</h3>
+                <p className="text-[10px] sm:text-xs text-gray-400 mt-1 truncate">{sub}</p>
             </div>
         </div>
     </div>
