@@ -124,12 +124,27 @@ export default function Home() {
             </span>
           </Link>
 
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-7 text-[14px] font-medium text-gray-600">
-            {['How It Works','For Candidates','For Companies','About Us'].map(l => (
-              <a key={l} href="#" className="hover:text-[#0b3d6b] transition-colors">{l}</a>
-            ))}
-          </nav>
+        {/* Nav */}
+        <nav className="hidden md:flex items-center gap-7 text-[14px] font-medium text-gray-600">
+          {[
+            { label: 'How It Works',   href: '#how'        },
+            { label: 'For Candidates', href: '#candidates' },
+            { label: 'For Companies',  href: '#companies'  },
+            { label: 'About Us',       href: '#about'      },
+          ].map(item => (
+            <a
+              key={item.label}
+              href={item.href}
+              onClick={(e) => {
+                e.preventDefault();
+                document.querySelector(item.href)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="hover:text-[#0b3d6b] transition-colors"
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
 
           {/* Auth */}
           <div className="flex items-center gap-2.5">
@@ -186,6 +201,10 @@ export default function Home() {
                 <UserCheck size={18} /> Join as Candidate
               </Link>
               <a href="#companies"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.querySelector('#companies')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl border-2 border-white/20 text-white font-bold text-[15px] hover:bg-white/10 hover:border-white/40 transition-all">
                 <Building2 size={18} /> Hire Through Us
               </a>
@@ -202,46 +221,105 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Right — visual */}
-          <div className="hidden lg:flex flex-col gap-4 items-center">
-            {/* Central badge */}
-            <div className="relative flex items-center justify-center">
-              <div className="w-52 h-52 rounded-full border border-[#2fb852]/20" />
-              <div className="absolute w-36 h-36 rounded-full border border-[#1a5490]/20" />
-              <div className="absolute w-28 h-28 rounded-full bg-gradient-to-br from-[#0b3d6b] to-[#0e8c7a] flex flex-col items-center justify-center shadow-2xl">
-                <img src="assets/logo.png" alt="WHS" className="w-16 h-16 object-contain rounded-full" />
-              </div>
-              {/* Orbit items */}
-              {[
-                { label:'5K+ Candidates', top:'-20px', left:'50%', translate:'-50%', bg:'#dbeafe', color:'#1d4ed8' },
-                { label:'300+ Companies',  top:'50%', right:'-90px', translate:'translateY(-50%)', bg:'#dcfce7', color:'#166534' },
-                { label:'98% Satisfaction',bottom:'-20px', left:'50%', translate:'-50%', bg:'#fce7f3', color:'#9d174d' },
-                { label:'< 7 day fill',   top:'50%', left:'-90px', translate:'translateY(-50%)', bg:'#fef9c3', color:'#854d0e' },
-              ].map((o, i) => (
-                <div key={i}
-                  className="absolute text-[11px] font-bold px-3 py-1.5 rounded-full shadow-md whitespace-nowrap"
-                  style={{ background: o.bg, color: o.color, top: o.top, left: o.left, right: (o as any).right, bottom: (o as any).bottom, transform: o.translate.startsWith('translateY') ? o.translate : `translateX(${o.translate})` }}
-                >
-                  {o.label}
-                </div>
-              ))}
-            </div>
+{/* Right — visual */}
+<div className="hidden lg:flex flex-col gap-6 items-center justify-center">
+  <style>{`
+    @keyframes spin-slow   { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+    @keyframes spin-rev    { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+    @keyframes float-badge { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
+    @keyframes pulse-ring  { 0%,100% { opacity:0.15; transform:scale(1);    } 50% { opacity:0.35; transform:scale(1.04); } }
+    @keyframes fade-in-up  { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    .orbit-outer { animation: spin-slow 22s linear infinite; }
+    .orbit-inner { animation: spin-rev  14s linear infinite; }
+    .badge-float { animation: float-badge 3.6s ease-in-out infinite; }
+    .badge-float:nth-child(2) { animation-delay: -0.9s; }
+    .badge-float:nth-child(3) { animation-delay: -1.8s; }
+    .badge-float:nth-child(4) { animation-delay: -2.7s; }
+    .ring-pulse  { animation: pulse-ring 3s ease-in-out infinite; }
+    .fields-card { animation: fade-in-up 0.8s ease both; animation-delay: 0.4s; }
+  `}</style>
 
-            {/* Fields we cover */}
-            <div className="mt-8 bg-white/[0.07] border border-white/10 rounded-2xl p-5 w-full max-w-sm">
-              <p className="text-[11px] font-bold uppercase tracking-[2px] text-white/40 mb-3">Fields we cover</p>
-              <div className="flex flex-wrap gap-2">
-                {FIELDS.map(f => (
-                  <span key={f} className="text-[11px] px-2.5 py-1 rounded-full border border-white/15 text-white/60">{f}</span>
-                ))}
-              </div>
-            </div>
-          </div>
+  {/* Orbit diagram */}
+  <div className="relative flex items-center justify-center" style={{ width: 340, height: 340 }}>
+
+    {/* Pulsing glow */}
+    <div className="ring-pulse absolute w-72 h-72 rounded-full"
+         style={{ background: 'radial-gradient(circle, rgba(47,184,82,0.13) 0%, transparent 70%)' }} />
+
+    {/* Outer rotating ring */}
+    <div className="orbit-outer absolute w-72 h-72 rounded-full border border-[#2fb852]/25">
+      {[0, 90, 180, 270].map(deg => (
+        <div key={deg} className="absolute w-2 h-2 rounded-full bg-[#2fb852]/60"
+             style={{ top:'50%', left:'50%', transform:`rotate(${deg}deg) translateY(-143px) translateX(-4px)` }} />
+      ))}
+    </div>
+
+    {/* Inner counter-rotating ring */}
+    <div className="orbit-inner absolute w-44 h-44 rounded-full border border-[#1a5490]/30">
+      {[45, 135, 225, 315].map(deg => (
+        <div key={deg} className="absolute w-1.5 h-1.5 rounded-full bg-[#1a5490]/50"
+             style={{ top:'50%', left:'50%', transform:`rotate(${deg}deg) translateY(-87px) translateX(-3px)` }} />
+      ))}
+    </div>
+
+    <div className="absolute w-56 h-56 rounded-full border border-white/[0.06]" />
+
+    {/* Top badge */}
+    <div className="badge-float absolute" style={{ top: 12, left:'50%', transform:'translateX(-50%)' }}>
+      <span className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap"
+            style={{ background:'#dbeafe', color:'#1d4ed8' }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#1d4ed8]" /> 5K+ Candidates
+      </span>
+    </div>
+
+    {/* Right badge */}
+    <div className="badge-float absolute" style={{ top:'50%', right: -10, transform:'translateY(-50%)' }}>
+      <span className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap"
+            style={{ background:'#dcfce7', color:'#166534' }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#166534]" /> 300+ Companies
+      </span>
+    </div>
+
+    {/* Bottom badge */}
+    <div className="badge-float absolute" style={{ bottom: 12, left:'50%', transform:'translateX(-50%)' }}>
+      <span className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap"
+            style={{ background:'#fce7f3', color:'#9d174d' }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#9d174d]" /> 98% Satisfaction
+      </span>
+    </div>
+
+    {/* Left badge */}
+    <div className="badge-float absolute" style={{ top:'50%', left: -10, transform:'translateY(-50%)' }}>
+      <span className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap"
+            style={{ background:'#fef9c3', color:'#854d0e' }}>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#854d0e]" /> &lt;7 day fill
+      </span>
+    </div>
+
+    {/* Centre logo */}
+    <div className="absolute w-24 h-24 rounded-full bg-gradient-to-br from-[#0b3d6b] to-[#0e8c7a] flex items-center justify-center shadow-[0_0_40px_rgba(47,184,82,0.3)]">
+      <img src="assets/logo.png" alt="WHS" className="w-16 h-16 object-contain rounded-full" />
+    </div>
+  </div>
+
+  {/* Fields card */}
+  <div className="fields-card bg-white/[0.07] border border-white/10 rounded-2xl p-5 w-full max-w-sm">
+    <p className="text-[10px] font-bold uppercase tracking-[2.5px] text-white/35 mb-3">Fields we cover</p>
+    <div className="flex flex-wrap gap-2">
+      {FIELDS.map(f => (
+        <span key={f}
+          className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-white/55 hover:border-[#2fb852]/50 hover:text-[#5fda7e] transition-colors cursor-default">
+          {f}
+        </span>
+      ))}
+    </div>
+  </div>
+</div>
         </div>
       </section>
 
       {/* ════════════════════════ HOW IT WORKS ═══════════════════════════════ */}
-      <section id="how" className="py-28 px-6 lg:px-10 bg-[#f4f8fb] relative overflow-hidden">
+      <section id="how" className="py-28 px-6 lg:px-10 bg-[#f4f8fb] relative overflow-hidden scroll-mt-[68px]">
         <div className="absolute right-0 top-10 text-[160px] font-black text-[#0b3d6b]/[0.03] select-none pointer-events-none leading-none">WHS</div>
         <div className="max-w-7xl mx-auto">
           <div className="max-w-xl mb-16">
@@ -275,7 +353,7 @@ export default function Home() {
       </section>
 
       {/* ════════════════════════ FOR CANDIDATES ═════════════════════════════ */}
-      <section id="candidates" className="py-28 px-6 lg:px-10 bg-white">
+      <section id="candidates" className="py-28 px-6 lg:px-10 bg-white scroll-mt-[68px]">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
 
           {/* Left — content */}
@@ -350,7 +428,7 @@ export default function Home() {
       </section>
 
       {/* ════════════════════════ FOR COMPANIES ══════════════════════════════ */}
-      <section id="companies" className="py-28 px-6 lg:px-10 bg-[#f4f8fb]">
+      <section id="companies" className="py-28 px-6 lg:px-10 bg-[#f4f8fb] scroll-mt-[68px]">
         <div className="max-w-7xl mx-auto">
           <div className="max-w-2xl mb-14">
             <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">For Companies</p>
@@ -395,6 +473,35 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ABOUT */}
+<section id="about" className="py-20 px-6 lg:px-10 bg-white scroll-mt-[68px]">
+  <div className="max-w-7xl mx-auto text-center">
+    <p className="text-[11px] font-bold uppercase tracking-[3px] text-[#1f8f3e] mb-3">About WHS</p>
+    <h2 className="text-[clamp(26px,3vw,42px)] font-black text-[#061e35] leading-tight mb-5">
+      Sri Lanka's most trusted<br />
+      <span className="text-[#0b3d6b]">talent acquisition partner</span>
+    </h2>
+    <p className="text-[16px] text-gray-500 max-w-2xl mx-auto leading-relaxed font-light mb-12">
+      Founded in 2018, WHS was built on one belief — great talent and great companies
+      deserve to find each other without the noise. We personally manage every placement,
+      from first contact to first day on the job.
+    </p>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-5 max-w-3xl mx-auto">
+      {[
+        { num:'2018',   label:'Year Founded'          },
+        { num:'5,000+', label:'Professionals Placed'   },
+        { num:'300+',   label:'Partner Companies'      },
+        { num:'98%',    label:'Client Retention Rate'  },
+      ].map(m => (
+        <div key={m.label} className="bg-[#f4f8fb] rounded-2xl p-5 border border-[#e8f0f9]">
+          <p className="text-[26px] font-black text-[#0b3d6b] leading-none">{m.num}</p>
+          <p className="text-[12px] text-gray-500 mt-1">{m.label}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
 
       {/* ════════════════════════ TESTIMONIALS ═══════════════════════════════ */}
       <section className="py-28 px-6 lg:px-10 bg-[#061e35] relative overflow-hidden">
