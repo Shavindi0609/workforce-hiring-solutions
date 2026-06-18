@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// Define types for selected fields
 type SelectedFields = {
   'Personal Info': boolean;
   'Professional Experience': boolean;
@@ -30,12 +29,10 @@ const ExportData: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const [candidates, setCandidates] = useState<any[]>([]);
 
-  // Fetch candidates data
   const fetchCandidates = async () => {
     try {
       let query = supabase.from('candidates').select('*');
       
-      // Apply time period filter
       if (timePeriod === 'Today') {
         const today = new Date().toISOString().split('T')[0];
         query = query.gte('created_at', today);
@@ -58,12 +55,10 @@ const ExportData: React.FC = () => {
     fetchCandidates();
   }, [timePeriod]);
 
-  // Toggle field selection
   const toggleField = (field: keyof SelectedFields) => {
     setSelectedFields(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  // Prepare data for export based on selected fields
   const prepareExportData = () => {
     return candidates.map(candidate => {
       const exportRow: Record<string, any> = {};
@@ -100,20 +95,17 @@ const ExportData: React.FC = () => {
     });
   };
 
-  // Get headers for export
   const getHeaders = () => {
     const sampleRow = prepareExportData()[0];
     return sampleRow ? Object.keys(sampleRow) : [];
   };
 
-  // Get data rows for export
   const getDataRows = () => {
     const exportData = prepareExportData();
     const headers = getHeaders();
     return exportData.map(row => headers.map(header => row[header] || ''));
   };
 
-  // Export to CSV
   const exportToCSV = () => {
     const exportData = prepareExportData();
     if (exportData.length === 0) {
@@ -139,7 +131,6 @@ const ExportData: React.FC = () => {
     toast.success('CSV exported successfully');
   };
 
-  // Export to Excel (XLS format)
   const exportToExcel = () => {
     const exportData = prepareExportData();
     if (exportData.length === 0) {
@@ -149,7 +140,6 @@ const ExportData: React.FC = () => {
     
     const headers = Object.keys(exportData[0]);
     
-    // Create HTML table for Excel
     let htmlContent = `<html><head><meta charset="UTF-8"></head><body><table border="1">`;
     htmlContent += `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
     
@@ -171,7 +161,6 @@ const ExportData: React.FC = () => {
     toast.success('Excel file exported successfully');
   };
 
-  // Export to PDF using jsPDF
   const exportToPDF = () => {
     const exportData = prepareExportData();
     if (exportData.length === 0) {
@@ -182,26 +171,22 @@ const ExportData: React.FC = () => {
     const headers = getHeaders();
     const dataRows = getDataRows();
     
-    // Create new PDF document
     const doc = new jsPDF({
       orientation: 'landscape',
       unit: 'mm',
       format: 'a4'
     });
     
-    // Add title
     doc.setFontSize(18);
     doc.setTextColor(37, 99, 235);
     doc.text('Candidates Export Report', 14, 20);
     
-    // Add metadata
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
     doc.text(`Time Period: ${timePeriod}`, 14, 36);
     doc.text(`Total Records: ${exportData.length}`, 14, 42);
     
-    // Add table
     autoTable(doc, {
       head: [headers],
       body: dataRows,
@@ -233,7 +218,6 @@ const ExportData: React.FC = () => {
       }
     });
     
-    // Add footer
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
@@ -247,7 +231,6 @@ const ExportData: React.FC = () => {
       );
     }
     
-    // Save the PDF
     doc.save(`candidates_export_${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success('PDF exported successfully');
   };
