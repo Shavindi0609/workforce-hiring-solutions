@@ -75,7 +75,7 @@ function SkillInput({ skills, onChange }: { skills: string[]; onChange: (s: stri
           </span>
         ))}
       </div>
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <input
           type="text"
           value={input}
@@ -87,7 +87,7 @@ function SkillInput({ skills, onChange }: { skills: string[]; onChange: (s: stri
         <button
           type="button"
           onClick={add}
-          className="px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-xl hover:bg-lime-700 transition"
+          className="w-full sm:w-auto px-4 py-2 bg-lime-600 text-white text-sm font-medium rounded-xl hover:bg-lime-700 transition"
         >
           Add
         </button>
@@ -101,10 +101,10 @@ function SkillInput({ skills, onChange }: { skills: string[]; onChange: (s: stri
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60">
         <h3 className="text-sm font-semibold text-slate-700 tracking-tight">{title}</h3>
       </div>
-      <div className="p-6">{children}</div>
+      <div className="p-4 sm:p-6">{children}</div>
     </div>
   );
 }
@@ -217,7 +217,7 @@ export default function EditProfile() {
         const ext = cvFile.name.split('.').pop();
         const path = `${user.id}/cv_${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage
-          .from('cvs')                          // ← your bucket name
+          .from('cvs')
           .upload(path, cvFile, { upsert: true });
         if (uploadError) throw uploadError;
 
@@ -273,38 +273,38 @@ export default function EditProfile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 font-sans">
 
-      {/* Toast */}
+      {/* Toast - Responsive */}
       {toast && (
-        <div className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl shadow-lg text-sm font-medium transition-all ${
+        <div className={`fixed top-4 right-4 left-4 sm:left-auto z-50 flex items-center gap-2 px-4 sm:px-5 py-3 rounded-2xl shadow-lg text-sm font-medium transition-all ${
           toast.type === 'success'
             ? 'bg-lime-600 text-white'
             : 'bg-red-500 text-white'
         }`}>
-          {toast.type === 'success' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-          {toast.msg}
+          {toast.type === 'success' ? <Check className="w-4 h-4 flex-shrink-0" /> : <X className="w-4 h-4 flex-shrink-0" />}
+          <span>{toast.msg}</span>
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-10">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
+        {/* Header - Responsive */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
               onClick={() => navigate('/candidate/candidate-dashboard')}
-              className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition shadow-sm"
+              className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition shadow-sm flex-shrink-0"
             >
               <ArrowLeft className="w-4 h-4 text-slate-600" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-slate-800 tracking-tight">Edit Profile</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">Edit Profile</h1>
               <p className="text-sm text-slate-500">Update your candidate information</p>
             </div>
           </div>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-lime-600 hover:bg-lime-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl shadow-md transition"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 bg-lime-600 hover:bg-lime-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl shadow-md transition"
           >
             {saving ? (
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -315,7 +315,7 @@ export default function EditProfile() {
           </button>
         </div>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
 
           {/* ── 1. Basic Information ── */}
           <Section title="Basic Information">
@@ -327,8 +327,8 @@ export default function EditProfile() {
                 <input className={inputCls} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="jane@example.com" />
               </Field>
               <Field label="Phone">
-                <div className="flex gap-2">
-                  <select className="px-2 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-lime-400" value={form.country_code} onChange={(e) => set('country_code', e.target.value)}>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <select className="px-2 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-lime-400 w-full sm:w-auto" value={form.country_code} onChange={(e) => set('country_code', e.target.value)}>
                     {COUNTRY_CODES.map((c) => <option key={c}>{c}</option>)}
                   </select>
                   <input className={inputCls} value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="77 123 4567" />
@@ -391,7 +391,7 @@ export default function EditProfile() {
                 <label className="flex items-center gap-3 cursor-pointer mt-1">
                   <div
                     onClick={() => set('willing_to_contact', !form.willing_to_contact)}
-                    className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 ${
+                    className={`w-11 h-6 rounded-full transition-colors flex items-center px-0.5 flex-shrink-0 ${
                       form.willing_to_contact ? 'bg-lime-500' : 'bg-slate-300'
                     }`}
                   >
@@ -411,19 +411,19 @@ export default function EditProfile() {
           <Section title="Curriculum Vitae">
             {/* Current CV */}
             {(currentCvFilename || currentCvUrl) && !cvFile && (
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-lime-100 rounded-lg flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-200 mb-4">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="w-9 h-9 bg-lime-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FileText className="w-4 h-4 text-lime-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{currentCvFilename ?? 'Current CV'}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-700 truncate max-w-[150px] sm:max-w-xs">{currentCvFilename ?? 'Current CV'}</p>
                     <p className="text-xs text-slate-400">Currently uploaded</p>
                   </div>
                 </div>
                 {currentCvUrl && (
                   <a href={currentCvUrl} target="_blank" rel="noopener noreferrer"
-                    className="text-xs font-medium text-blue-600 hover:underline">
+                    className="text-xs font-medium text-blue-600 hover:underline w-full sm:w-auto text-center sm:text-left">
                     View
                   </a>
                 )}
@@ -432,19 +432,20 @@ export default function EditProfile() {
 
             {/* New file selected */}
             {cvFile && (
-              <div className="flex items-center justify-between p-4 bg-lime-50 rounded-xl border border-lime-200 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-lime-100 rounded-lg flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 sm:p-4 bg-lime-50 rounded-xl border border-lime-200 mb-4">
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="w-9 h-9 bg-lime-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <FileText className="w-4 h-4 text-lime-600" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">{cvFile.name}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-700 truncate max-w-[150px] sm:max-w-xs">{cvFile.name}</p>
                     <p className="text-xs text-slate-400">{(cvFile.size / 1024 / 1024).toFixed(2)} MB — ready to upload</p>
                   </div>
                 </div>
                 <button type="button" onClick={() => { setCvFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="p-1 hover:bg-red-50 rounded-lg transition">
-                  <X className="w-4 h-4 text-red-500" />
+                  className="p-1 hover:bg-red-50 rounded-lg transition w-full sm:w-auto text-center">
+                  <X className="w-4 h-4 text-red-500 inline" />
+                  <span className="sm:hidden text-xs text-red-500 ml-1">Remove</span>
                 </button>
               </div>
             )}
@@ -454,28 +455,28 @@ export default function EditProfile() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-5 py-2.5 border-2 border-dashed border-slate-300 hover:border-lime-400 hover:bg-lime-50/30 text-slate-600 hover:text-lime-700 text-sm font-medium rounded-xl transition w-full justify-center"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2.5 border-2 border-dashed border-slate-300 hover:border-lime-400 hover:bg-lime-50/30 text-slate-600 hover:text-lime-700 text-sm font-medium rounded-xl transition w-full justify-center text-center"
             >
-              <Upload className="w-4 h-4" />
-              {currentCvFilename ? 'Replace CV' : 'Upload CV'} (PDF or DOCX, max 5 MB)
+              <Upload className="w-4 h-4 flex-shrink-0" />
+              <span>{currentCvFilename ? 'Replace CV' : 'Upload CV'} (PDF or DOCX, max 5 MB)</span>
             </button>
           </Section>
 
         </div>
 
-        {/* Bottom Save */}
-        <div className="mt-8 flex justify-end gap-3">
+        {/* Bottom Save - Responsive */}
+        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-end gap-3">
           <button
             type="button"
             onClick={() => navigate('/candidate/candidate-dashboard')}
-            className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition shadow-sm"
+            className="w-full sm:w-auto px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition shadow-sm"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-8 py-2.5 bg-lime-600 hover:bg-lime-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl shadow-md transition"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-2.5 bg-lime-600 hover:bg-lime-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl shadow-md transition"
           >
             {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
             {saving ? 'Saving…' : 'Save Changes'}

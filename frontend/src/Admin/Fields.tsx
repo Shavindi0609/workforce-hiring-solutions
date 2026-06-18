@@ -1,4 +1,3 @@
-// src/Admin/Fields.tsx
 import { useState } from 'react';
 import { Search, Edit2, Trash2, MoreVertical, Plus, Briefcase, TrendingUp, Archive } from 'lucide-react';
 import { useFields } from '../hooks/useFields';
@@ -62,30 +61,29 @@ export default function Fields() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8">
-            {/* Header Section */}
-            <div className="flex justify-between items-center mb-8">
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+            {/* Header Section - Responsive */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold">Fields</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold">Fields</h1>
                     <p className="text-sm text-gray-500">Manage candidate fields</p>
                 </div>
-                <div className="flex gap-3">
-                    <button 
-                        onClick={handleAddField}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors"
-                    >
-                        <Plus size={16} /> Add Field
-                    </button>
-                </div>
+                <button 
+                    onClick={handleAddField}
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+                >
+                    <Plus size={16} /> <span className="hidden sm:inline">Add Field</span>
+                    <span className="sm:hidden">Add</span>
+                </button>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-8 mb-8">
+            {/* Stats Cards - Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
                 <StatCard 
                     title="Total Fields" 
                     value={stats.total.toString()} 
                     sub="100% of total" 
-                    icon={<Briefcase size={28} className="text-blue-500" />}
+                    icon={<Briefcase size={24} className="text-blue-500" />}
                     bgColor="bg-blue-50"
                 />
                 <StatCard 
@@ -93,7 +91,7 @@ export default function Fields() {
                     value={stats.active.toString()} 
                     sub={`${stats.activePercentage.toFixed(1)}% of total`} 
                     color="text-green-600"
-                    icon={<TrendingUp size={28} className="text-green-500" />}
+                    icon={<TrendingUp size={24} className="text-green-500" />}
                     bgColor="bg-green-50"
                 />
                 <StatCard 
@@ -101,14 +99,14 @@ export default function Fields() {
                     value={stats.inactive.toString()} 
                     sub={`${stats.inactivePercentage.toFixed(1)}% of total`} 
                     color="text-orange-500"
-                    icon={<Archive size={28} className="text-orange-500" />}
+                    icon={<Archive size={24} className="text-orange-500" />}
                     bgColor="bg-orange-50"
                 />
             </div>
 
-            {/* Search Section */}
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 mb-6">
-                <div className="flex gap-4">
+            {/* Search Section - Responsive */}
+            <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 mb-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <div className="relative flex-grow">
                         <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                         <input 
@@ -122,67 +120,79 @@ export default function Fields() {
                     </div>
                     <button 
                         onClick={handleSearch}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                        className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                     >
                         Search
                     </button>
                 </div>
             </div>
 
-            {/* Fields Table */}
+            {/* Fields Table - Horizontally scrollable on mobile */}
             <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="text-gray-400 text-xs uppercase border-b bg-gray-50">
-                            <th className="p-4 w-12 text-center">#</th>
-                            <th className="p-4">Field Name</th>
-                            <th className="p-4">Description</th>
-                            <th className="p-4 text-center">Status</th>
-                            <th className="p-4 text-center">Candidates</th>
-                            <th className="p-4 text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                        {filteredFields.map((field, index) => (
-                            <tr key={field.id} className="border-b hover:bg-gray-50 transition-colors">
-                                <td className="p-4 text-center text-gray-700 font-medium">{index + 1}</td>
-                                <td className="p-4 font-medium text-gray-900">{field.name}</td>
-                                <td className="p-4 text-gray-500">{field.description}</td>
-                                <td className="p-4 text-center">
-                                    <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium ${
-                                        field.status === 'Active' 
-                                            ? 'bg-green-100 text-green-700' 
-                                            : 'bg-gray-100 text-gray-500'
-                                    }`}>
-                                        {field.status}
-                                    </span>
-                                </td>
-                                <td className="p-4 text-center font-medium">{field.candidates_count}</td>
-                                <td className="p-4">
-                                    <div className="flex items-center justify-center gap-2">
-                                        <button 
-                                            onClick={() => handleEditField(field)}
-                                            className="p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
-                                            title="Edit"
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteField(field.id)}
-                                            className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                        <button className="p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors" title="More">
-                                            <MoreVertical size={16} />
-                                        </button>
-                                    </div>
-                                </td>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[700px] lg:min-w-full">
+                        <thead>
+                            <tr className="text-gray-400 text-xs uppercase border-b bg-gray-50">
+                                <th className="p-3 sm:p-4 w-12 text-center">#</th>
+                                <th className="p-3 sm:p-4">Field Name</th>
+                                <th className="p-3 sm:p-4 hidden sm:table-cell">Description</th>
+                                <th className="p-3 sm:p-4 text-center">Status</th>
+                                <th className="p-3 sm:p-4 text-center hidden md:table-cell">Candidates</th>
+                                <th className="p-3 sm:p-4 text-center">Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="text-sm">
+                            {filteredFields.map((field, index) => (
+                                <tr key={field.id} className="border-b hover:bg-gray-50 transition-colors">
+                                    <td className="p-3 sm:p-4 text-center text-gray-700 font-medium">{index + 1}</td>
+                                    <td className="p-3 sm:p-4 font-medium text-gray-900">
+                                        <div className="min-w-[80px]">
+                                            <p className="truncate">{field.name}</p>
+                                            <p className="text-xs text-gray-400 sm:hidden truncate">{field.description}</p>
+                                        </div>
+                                    </td>
+                                    <td className="p-3 sm:p-4 text-gray-500 hidden sm:table-cell">
+                                        <div className="max-w-[200px] truncate">{field.description}</div>
+                                    </td>
+                                    <td className="p-3 sm:p-4 text-center">
+                                        <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${
+                                            field.status === 'Active' 
+                                                ? 'bg-green-100 text-green-700' 
+                                                : 'bg-gray-100 text-gray-500'
+                                        }`}>
+                                            {field.status}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 sm:p-4 text-center font-medium hidden md:table-cell">{field.candidates_count}</td>
+                                    <td className="p-3 sm:p-4">
+                                        <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                            <button 
+                                                onClick={() => handleEditField(field)}
+                                                className="p-1.5 sm:p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                                title="Edit"
+                                            >
+                                                <Edit2 size={16} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDeleteField(field.id)}
+                                                className="p-1.5 sm:p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                            <button 
+                                                className="p-1.5 sm:p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors" 
+                                                title="More"
+                                            >
+                                                <MoreVertical size={16} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
                 
                 {filteredFields.length === 0 && (
                     <div className="text-center py-12">
@@ -190,14 +200,14 @@ export default function Fields() {
                     </div>
                 )}
 
-                {/* Pagination Footer */}
-                <div className="px-6 py-4 border-t flex items-center justify-between text-sm text-gray-500 bg-gray-50">
-                    <p>Showing {filteredFields.length} of {fields.length} fields</p>
+                {/* Pagination Footer - Responsive */}
+                <div className="px-4 sm:px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 bg-gray-50">
+                    <p className="text-xs sm:text-sm">Showing {filteredFields.length} of {fields.length} fields</p>
                     <div className="flex gap-2">
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors disabled:opacity-50" disabled>Previous</button>
-                        <button className="px-3 py-1 bg-blue-600 text-white rounded-md">1</button>
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors">2</button>
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors">Next</button>
+                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors disabled:opacity-50 text-xs sm:text-sm" disabled>Previous</button>
+                        <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs sm:text-sm">1</button>
+                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors text-xs sm:text-sm">2</button>
+                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors text-xs sm:text-sm">Next</button>
                     </div>
                 </div>
             </div>
@@ -222,17 +232,17 @@ const StatCard = ({ title, value, sub, color = "text-gray-900", icon, bgColor = 
     icon?: React.ReactNode; 
     bgColor?: string;
 }) => (
-    <div className="bg-white p-6 rounded-2xl border shadow-sm transition-all hover:shadow-md">
-        <div className="flex items-start gap-4">
+    <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-sm transition-all hover:shadow-md">
+        <div className="flex items-start gap-3 sm:gap-4">
             {icon && (
-                <div className={`p-3 rounded-xl ${bgColor}`}>
+                <div className={`p-2 sm:p-3 rounded-xl ${bgColor} flex-shrink-0`}>
                     {icon}
                 </div>
             )}
-            <div className="flex-1">
-                <p className="text-gray-400 text-xs uppercase tracking-wider">{title}</p>
-                <h3 className={`text-3xl font-bold ${color} mt-2`}>{value}</h3>
-                <p className="text-xs text-gray-400 mt-1">{sub}</p>
+            <div className="flex-1 min-w-0">
+                <p className="text-gray-400 text-[10px] sm:text-xs uppercase tracking-wider">{title}</p>
+                <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold ${color} mt-1 sm:mt-2 truncate`}>{value}</h3>
+                <p className="text-[10px] sm:text-xs text-gray-400 mt-1 truncate">{sub}</p>
             </div>
         </div>
     </div>

@@ -1,4 +1,3 @@
-// src/Admin/SalaryInsights.tsx
 import { useMemo, useState } from "react";
 import { 
    Filter, ChevronDown, XCircle, Calendar, Briefcase, Clock, 
@@ -73,112 +72,125 @@ export default function SalaryInsights() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      {/* Header Section - Responsive */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Salary Insights</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Salary Insights</h1>
           <p className="text-sm text-gray-500">Insights about salary ranges</p>
         </div>
       </div>
 
-      {/* Search and Filters Section */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200 mb-6 flex flex-wrap items-center gap-4">
-        <div className="relative">
-          <div className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white">
-            <Briefcase size={16} className="text-gray-400" />
-            <select 
-              className="bg-transparent focus:outline-none cursor-pointer"
-              value={draftFilters.field}
-              onChange={(e) => setDraftFilters({ ...draftFilters, field: e.target.value })}
+      {/* Search and Filters Section - Responsive */}
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 mb-6">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          {/* First row: Field and Experience filters */}
+          <div className="flex flex-wrap gap-3">
+            <div className="flex-1 min-w-[150px]">
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white">
+                <Briefcase size={16} className="text-gray-400 flex-shrink-0" />
+                <select 
+                  className="bg-transparent focus:outline-none cursor-pointer w-full"
+                  value={draftFilters.field}
+                  onChange={(e) => setDraftFilters({ ...draftFilters, field: e.target.value })}
+                >
+                  {fieldOptions.map(field => (
+                    <option key={field} value={field}>{field}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-[150px]">
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white">
+                <Clock size={16} className="text-gray-400 flex-shrink-0" />
+                <select 
+                  className="bg-transparent focus:outline-none cursor-pointer w-full"
+                  value={draftFilters.experience}
+                  onChange={(e) => setDraftFilters({ ...draftFilters, experience: e.target.value })}
+                >
+                  {experienceOptions.map(exp => (
+                    <option key={exp} value={exp}>{exp}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+              </div>
+            </div>
+          </div>
+
+          {/* Second row: Date filters */}
+          <div className="flex flex-wrap gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white">
+                <Calendar size={16} className="text-gray-400 flex-shrink-0" />
+                <input 
+                  type="date" 
+                  className="bg-transparent focus:outline-none w-full sm:w-32"
+                  value={draftFilters.fromDate}
+                  onChange={(e) => setDraftFilters({ ...draftFilters, fromDate: e.target.value })}
+                />
+                <span className="text-gray-400 flex-shrink-0">to</span>
+                <input 
+                  type="date" 
+                  className="bg-transparent focus:outline-none w-full sm:w-32"
+                  value={draftFilters.toDate}
+                  onChange={(e) => setDraftFilters({ ...draftFilters, toDate: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Third row: Action buttons */}
+          <div className="flex flex-wrap gap-3">
+            <button 
+              className="flex-1 sm:flex-none bg-blue-600 text-white px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setAppliedFilters(draftFilters)}
+              disabled={!dateRangeValid}
             >
-              {fieldOptions.map(field => (
-                <option key={field} value={field}>{field}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="text-gray-400" />
+              <Filter size={16} /> Apply Filters
+            </button>
+
+            {hasActiveFilters && (
+              <button 
+                className="flex-1 sm:flex-none bg-white text-red-500 px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold hover:bg-red-50 transition-colors border border-gray-200 flex items-center justify-center gap-2"
+                onClick={clearAllFilters}
+              >
+                <XCircle size={16} /> Clear Filters
+              </button>
+            )}
           </div>
         </div>
-
-        <div className="relative">
-          <div className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white">
-            <Clock size={16} className="text-gray-400" />
-            <select 
-              className="bg-transparent focus:outline-none cursor-pointer"
-              value={draftFilters.experience}
-              onChange={(e) => setDraftFilters({ ...draftFilters, experience: e.target.value })}
-            >
-              {experienceOptions.map(exp => (
-                <option key={exp} value={exp}>{exp}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="text-gray-400" />
-          </div>
-        </div>
-
-        <div className="relative">
-          <div className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white">
-            <Calendar size={16} className="text-gray-400" />
-            <input 
-              type="date" 
-              className="bg-transparent focus:outline-none w-32"
-              value={draftFilters.fromDate}
-              onChange={(e) => setDraftFilters({ ...draftFilters, fromDate: e.target.value })}
-            />
-            <span className="text-gray-400">to</span>
-            <input 
-              type="date" 
-              className="bg-transparent focus:outline-none w-32"
-              value={draftFilters.toDate}
-              onChange={(e) => setDraftFilters({ ...draftFilters, toDate: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <button 
-          className="bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => setAppliedFilters(draftFilters)}
-          disabled={!dateRangeValid}
-        >
-          <Filter size={16} /> Apply Filters
-        </button>
-
-        {hasActiveFilters && (
-          <button 
-            className="bg-white text-red-500 px-5 py-2 rounded-xl text-sm font-semibold hover:bg-red-50 transition-colors border border-gray-200 flex items-center gap-2"
-            onClick={clearAllFilters}
-          >
-            <XCircle size={16} /> Clear Filters
-          </button>
-        )}
       </div>
 
-      {/* Salary Distribution and Overview Side by Side */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        {/* Salary Distribution Section */}
-        <div className="col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <div className="flex justify-between items-center mb-2">
+      {/* Salary Distribution and Overview - Responsive Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* Salary Distribution Section - Takes full width on mobile, 2 columns on desktop */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
             <h2 className="text-lg font-semibold text-gray-900">Salary Distribution by Field</h2>
             <span className="text-xs text-gray-400">Minimum to Maximum Range</span>
           </div>
-          <p className="text-sm text-gray-500 mb-6">Salary Range by Field (YTD)</p>
+          <p className="text-sm text-gray-500 mb-4 sm:mb-6">Salary Range by Field (YTD)</p>
           
-          <div className="h-80">
-            <div className="flex items-end gap-3 h-64">
+          <div className="h-64 sm:h-80 overflow-x-auto">
+            <div className="flex items-end gap-2 sm:gap-3 h-48 sm:h-64 min-w-[500px]">
               {salaryDistributionFields.map((item, idx) => {
                 const height = (item.maxSalary / maxSalary) * 100;
                 return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-2">
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 sm:gap-2">
                     <div 
                       className="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t-lg transition-all hover:from-blue-600 hover:to-blue-500 cursor-pointer relative group"
-                      style={{ height: `${Math.max(height, 10)}%`, minHeight: '30px' }}
+                      style={{ height: `${Math.max(height, 10)}%`, minHeight: '20px' }}
                     >
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                         {item.count} candidates
                       </div>
                     </div>
-                    <span className="text-xs text-gray-500 text-center">{item.field}</span>
-                    <span className="text-xs font-medium text-gray-700">Rs.{(item.minSalary / 1000).toFixed(0)}K - Rs.{(item.maxSalary / 1000).toFixed(0)}K</span>
+                    <span className="text-[10px] sm:text-xs text-gray-500 text-center">{item.field}</span>
+                    <span className="text-[8px] sm:text-xs font-medium text-gray-700 text-center">
+                      Rs.{(item.minSalary / 1000).toFixed(0)}K - Rs.{(item.maxSalary / 1000).toFixed(0)}K
+                    </span>
                   </div>
                 );
               })}
@@ -186,42 +198,42 @@ export default function SalaryInsights() {
           </div>
         </div>
 
-        {/* Overview Section */}
-        <div className="col-span-1 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        {/* Overview Section - Full width on mobile, 1 column on desktop */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Overview</h2>
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-4">
             <div className="border-b border-gray-100 pb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Average Minimum Salary</p>
-              <p className="text-xl font-bold text-gray-900">Rs.{salaryOverview.avg_min_salary.toLocaleString()}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Avg. Min Salary</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">Rs.{salaryOverview.avg_min_salary.toLocaleString()}</p>
               <p className="text-xs text-gray-400 mt-1">per year</p>
             </div>
             <div className="border-b border-gray-100 pb-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Average Maximum Salary</p>
-              <p className="text-xl font-bold text-green-600">Rs.{salaryOverview.avg_max_salary.toLocaleString()}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Avg. Max Salary</p>
+              <p className="text-lg sm:text-xl font-bold text-green-600">Rs.{salaryOverview.avg_max_salary.toLocaleString()}</p>
               <p className="text-xs text-gray-400 mt-1">per year</p>
             </div>
             <div className="border-b border-gray-100 pb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Highest Salary Range</p>
-              <p className="text-xl font-bold text-purple-600">{salaryOverview.highest_range}</p>
+              <p className="text-lg sm:text-xl font-bold text-purple-600">{salaryOverview.highest_range}</p>
               <p className="text-xs text-gray-400 mt-1">per year</p>
             </div>
             <div className="pb-2">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total Candidates</p>
-              <p className="text-xl font-bold text-orange-600">{salaryOverview.total_candidates.toLocaleString()}</p>
+              <p className="text-lg sm:text-xl font-bold text-orange-600">{salaryOverview.total_candidates.toLocaleString()}</p>
               <p className="text-xs text-gray-400 mt-1">across all ranges</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Candidates by Salary Range and Salary Range by Experience */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
+      {/* Candidates by Salary Range and Salary Range by Experience - Responsive */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Candidates by Salary Range - Donut Chart */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Candidates by Salary Range</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="relative flex justify-center">
-              <div className="w-48 h-48">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            <div className="relative flex justify-center w-full sm:w-auto">
+              <div className="w-40 h-40 sm:w-48 sm:h-48">
                 <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                   {(() => {
                     let currentAngle = 0;
@@ -256,14 +268,14 @@ export default function SalaryInsights() {
                 </svg>
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-1">
+            <div className="grid grid-cols-1 gap-1 w-full sm:w-auto">
               {salaryRangeDistribution.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: colors[idx % colors.length] }} />
-                    <span className="text-gray-600">{item.salary_range}</span>
+                    <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: colors[idx % colors.length] }} />
+                    <span className="text-gray-600 truncate">{item.salary_range}</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1 sm:gap-2 flex-shrink-0 ml-2">
                     <span className="font-medium text-gray-700">{item.candidate_count.toLocaleString()}</span>
                     <span className="text-gray-400">({item.percentage}%)</span>
                   </div>
@@ -275,24 +287,24 @@ export default function SalaryInsights() {
 
         {/* Salary Range by Experience Table */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gray-50">
             <h2 className="text-lg font-semibold text-gray-900">Salary Range by Experience</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[300px]">
               <thead>
                 <tr className="text-gray-400 text-xs uppercase border-b border-gray-100 bg-gray-50">
-                  <th className="p-4">Experience</th>
-                  <th className="p-4 text-center">Avg. Min Salary</th>
-                  <th className="p-4 text-center">Avg. Max Salary</th>
+                  <th className="p-3 sm:p-4">Experience</th>
+                  <th className="p-3 sm:p-4 text-center">Avg. Min</th>
+                  <th className="p-3 sm:p-4 text-center">Avg. Max</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {salaryByExperience.map((item, index) => (
                   <tr key={index} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                    <td className="p-4 font-medium text-gray-900">{item.experience_level}</td>
-                    <td className="p-4 text-center text-green-600 font-medium">Rs.{item.avg_min_salary.toLocaleString()}</td>
-                    <td className="p-4 text-center text-blue-600 font-medium">Rs.{item.avg_max_salary.toLocaleString()}</td>
+                    <td className="p-3 sm:p-4 font-medium text-gray-900">{item.experience_level}</td>
+                    <td className="p-3 sm:p-4 text-center text-green-600 font-medium">Rs.{item.avg_min_salary.toLocaleString()}</td>
+                    <td className="p-3 sm:p-4 text-center text-blue-600 font-medium">Rs.{item.avg_max_salary.toLocaleString()}</td>
                   </tr>
                 ))}
                 {salaryByExperience.length === 0 && (
@@ -306,13 +318,13 @@ export default function SalaryInsights() {
             </table>
           </div>
           
-          {/* Pagination Footer */}
-          <div className="px-6 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500 bg-gray-50">
-            <p>Showing {salaryByExperience.length} of {salaryByExperience.length} experience levels</p>
+          {/* Pagination Footer - Responsive */}
+          <div className="px-4 sm:px-6 py-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 bg-gray-50">
+            <p className="text-xs sm:text-sm">Showing {salaryByExperience.length} of {salaryByExperience.length}</p>
             <div className="flex gap-2">
-              <button className="px-3 py-1 border border-gray-200 rounded-md hover:bg-white transition-colors disabled:opacity-50" disabled>Previous</button>
-              <button className="px-3 py-1 bg-blue-600 text-white rounded-md">1</button>
-              <button className="px-3 py-1 border border-gray-200 rounded-md hover:bg-white transition-colors">Next</button>
+              <button className="px-3 py-1 border border-gray-200 rounded-md hover:bg-white transition-colors disabled:opacity-50 text-xs sm:text-sm" disabled>Previous</button>
+              <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs sm:text-sm">1</button>
+              <button className="px-3 py-1 border border-gray-200 rounded-md hover:bg-white transition-colors text-xs sm:text-sm">Next</button>
             </div>
           </div>
         </div>
