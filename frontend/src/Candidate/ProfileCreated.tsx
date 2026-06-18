@@ -176,7 +176,7 @@ export default function ProfileCreated() {
                     </div>
                   </div>
                   <button
-                    onClick={() => navigate("/settings")}
+                    onClick={() => navigate("/candidate/edit-profile")}
                     className="text-xs font-bold text-[#0b5d90] hover:underline"
                   >
                     Update Profile →

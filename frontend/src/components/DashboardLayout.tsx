@@ -4,15 +4,28 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
   UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase, FileText, Camera,
-  Save, AlertCircle, Trash2
+  Save, AlertCircle, Trash2, Users, CheckCircle
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import securityImage from '../assets/8.avif';
+
+interface Notification {
+  id: string;
+  type: 'new_candidate' | 'new_job_application' | 'job_update';
+  title: string;
+  message: string;
+  read: boolean;
+  created_at: string;
+  data: any;
+}
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +47,125 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      setNotifications(data || []);
+      const unread = data?.filter(n => !n.read).length || 0;
+      setUnreadCount(unread);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    }
+  };
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  // Mark all as read
+  const markAllAsRead = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      if (error) throw error;
+
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, read: true }))
+      );
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  };
+
+  // Handle notification click
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+
+    setIsNotificationsOpen(false);
+
+    // Navigate based on notification type
+    if (notification.type === 'new_candidate') {
+      navigate('/admin/candidate-dashboard');
+    } else if (notification.type === 'new_job_application') {
+      navigate('/admin/jobs');
+    }
+  };
+
+  // Setup real-time subscription for new notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('notifications-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('New notification received:', payload);
+          const newNotification = payload.new as Notification;
+          
+          // Add to state
+          setNotifications(prev => [newNotification, ...prev]);
+          setUnreadCount(prev => prev + 1);
+          
+          // Show browser notification
+          if (Notification.permission === 'granted') {
+            new Notification(newNotification.title, {
+              body: newNotification.message,
+              icon: '/logo.png'
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   useEffect(() => {
     const getUser = async () => {
       try {
@@ -51,7 +183,6 @@ export default function DashboardLayout() {
             .single();
           
           if (profileError && profileError.code === 'PGRST116') {
-            // Create profile if it doesn't exist
             const { data: newProfile, error: insertError } = await supabase
               .from('profiles')
               .insert([{ 
@@ -83,6 +214,14 @@ export default function DashboardLayout() {
               bio: profile.bio || '',
               role: profile.role || ''
             });
+          }
+
+          // Fetch notifications
+          await fetchNotifications();
+          
+          // Request notification permission
+          if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
           }
         } else {
           navigate('/signin');
@@ -158,15 +297,13 @@ export default function DashboardLayout() {
     }
   };
 
-  // Extract file path from avatar URL
+  // Image handling functions (same as your existing code)
   const extractFilePath = (url: string) => {
     try {
       const urlObj = new URL(url);
       const pathParts = urlObj.pathname.split('/');
-      // Find the position of 'profiles' in the path
       const profilesIndex = pathParts.findIndex(part => part === 'profiles');
       if (profilesIndex !== -1) {
-        // Return everything after 'profiles'
         return pathParts.slice(profilesIndex + 1).join('/');
       }
       return null;
@@ -175,7 +312,6 @@ export default function DashboardLayout() {
     }
   };
 
-  // Handle profile image removal
   const handleRemoveImage = async () => {
     if (!user || !userProfile?.avatar_url) return;
 
@@ -183,22 +319,18 @@ export default function DashboardLayout() {
     setUploadError(null);
     
     try {
-      // Extract file path from URL
       const filePath = extractFilePath(userProfile.avatar_url);
       
       if (filePath) {
-        // Delete image from storage
         const { error: deleteError } = await supabase.storage
           .from('profiles')
           .remove([filePath]);
         
         if (deleteError) {
           console.warn('Error deleting from storage:', deleteError);
-          // Continue with profile update even if storage delete fails
         }
       }
 
-      // Update profile to remove avatar_url
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
@@ -209,7 +341,6 @@ export default function DashboardLayout() {
 
       if (updateError) throw updateError;
 
-      // Update local state
       setUserProfile({ ...userProfile, avatar_url: null });
       setSuccessMessage('Profile picture removed successfully!');
       setShowRemoveConfirm(false);
@@ -242,7 +373,6 @@ export default function DashboardLayout() {
     setSuccessMessage(null);
     
     try {
-      // If there's an existing avatar, remove it first
       if (userProfile?.avatar_url) {
         const oldFilePath = extractFilePath(userProfile.avatar_url);
         if (oldFilePath) {
@@ -250,7 +380,6 @@ export default function DashboardLayout() {
         }
       }
 
-      // Create folder structure with user ID
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
@@ -351,7 +480,33 @@ export default function DashboardLayout() {
     return 'User';
   };
 
-  // Remove Confirmation Modal
+  const formatNotificationTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'new_candidate':
+        return <Users size={18} className="text-green-500" />;
+      case 'new_job_application':
+        return <Briefcase size={18} className="text-blue-500" />;
+      default:
+        return <Bell size={18} className="text-gray-500" />;
+    }
+  };
+
+  // Modal components (same as your existing code)
   const RemoveConfirmModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -401,7 +556,6 @@ export default function DashboardLayout() {
         </div>
         
         <div className="p-6 space-y-6">
-          {/* Profile Image Section */}
           <div className="flex flex-col items-center space-y-3">
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center overflow-hidden">
@@ -461,7 +615,6 @@ export default function DashboardLayout() {
             <p className="text-xs text-gray-500">Click camera to upload (Max 5MB), trash to remove</p>
           </div>
 
-          {/* Profile Form */}
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -577,11 +730,83 @@ export default function DashboardLayout() {
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            <button className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
-            </button>
+            {/* Notifications Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)} 
+                className="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
+              {isNotificationsOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)}></div>
+                  <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                    <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                      <h3 className="font-semibold text-gray-800">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button 
+                          onClick={markAllAsRead}
+                          className="text-xs text-blue-600 hover:text-blue-700"
+                        >
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                          <Bell size={40} className="text-gray-300 mb-2" />
+                          <p className="text-gray-500 text-sm">No notifications yet</p>
+                          <p className="text-gray-400 text-xs mt-1">New candidates and applications will appear here</p>
+                        </div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <button
+                            key={notification.id}
+                            onClick={() => handleNotificationClick(notification)}
+                            className={`w-full text-left p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                              !notification.read ? 'bg-blue-50/30' : ''
+                            }`}
+                          >
+                            <div className="flex gap-3">
+                              <div className="flex-shrink-0 mt-1">
+                                {getNotificationIcon(notification.type)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
+                                    {notification.title}
+                                  </p>
+                                  <span className="text-xs text-gray-400 flex-shrink-0">
+                                    {formatNotificationTime(notification.created_at)}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">{notification.message}</p>
+                              </div>
+                              {!notification.read && (
+                                <div className="flex-shrink-0">
+                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Profile Dropdown */}
             <div className="relative">
               <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
@@ -643,6 +868,7 @@ export default function DashboardLayout() {
         </div>
       </nav>
 
+      {/* Sidebar - keep your existing sidebar code */}
       <aside className={`fixed left-0 top-0 bottom-0 z-30 bg-white border-r border-gray-200 overflow-y-auto transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'} hidden lg:block`}>
         <div className="flex flex-col h-full">
           <div className={`px-4 pt-6 pb-6 ${!sidebarOpen && 'flex justify-center'}`}>
@@ -700,6 +926,7 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
+      {/* Mobile Sidebar */}
       {mobileSidebarOpen && (
         <>
           <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
