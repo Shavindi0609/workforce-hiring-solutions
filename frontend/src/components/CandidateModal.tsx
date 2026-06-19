@@ -1,4 +1,3 @@
-// src/components/CandidateModal.tsx
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Candidate, CreateCandidateDto } from '../types/candidate';
@@ -9,19 +8,26 @@ interface CandidateModalProps {
     onSubmit: (data: CreateCandidateDto | Partial<Candidate>) => Promise<void>;
     candidate?: Candidate | null;
     title: string;
+    fields?: Array<{ id: string; name: string; status: string }>; // Add fields prop
 }
 
-const FIELDS = ['Web Development', 'UI/UX Design', 'Data Science', 'Digital Marketing', 'Mobile Development', 'HR & Recruitment', 'DevOps', 'AI / ML'];
 const STATUSES = ['Actively Looking', 'Open to Opportunities'];
 const AVAILABILITY = ['Immediate', '2 Weeks', '1 Month', '2 Months', '3 Months'];
 const EXPERIENCE = ['0-1 Years', '1-2 Years', '2-3 Years', '3-4 Years', '4-5 Years', '5+ Years'];
 
-export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: CandidateModalProps) => {
+export const CandidateModal = ({ 
+    isOpen, 
+    onClose, 
+    onSubmit, 
+    candidate, 
+    title,
+    fields = [] 
+}: CandidateModalProps) => {
     const [formData, setFormData] = useState<CreateCandidateDto | Partial<Candidate>>({
         name: '',
         email: '',
         phone: '',
-        field: FIELDS[0],
+        field: '',
         experience: EXPERIENCE[0],
         status: 'Actively Looking',
         availability: AVAILABILITY[0],
@@ -32,19 +38,22 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
     });
     const [loading, setLoading] = useState(false);
 
+    // Get active fields (only show active fields in dropdown)
+    const activeFields = fields.filter(field => field.status === 'Active');
+
     useEffect(() => {
         if (candidate) {
             setFormData({
                 name: candidate.name,
                 email: candidate.email,
-                phone: candidate.phone,
+                phone: candidate.phone || '',
                 field: candidate.field,
-                experience: candidate.experience,
-                status: candidate.status,
-                availability: candidate.availability,
-                salary_min: candidate.salary_min,
-                salary_max: candidate.salary_max,
-                salary_range: candidate.salary_range,
+                experience: candidate.experience || EXPERIENCE[0],
+                status: candidate.status || 'Actively Looking',
+                availability: candidate.availability || AVAILABILITY[0],
+                salary_min: candidate.salary_min || 0,
+                salary_max: candidate.salary_max || 0,
+                salary_range: candidate.salary_range || '',
                 skills: candidate.skills || [],
             });
         } else {
@@ -52,7 +61,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                 name: '',
                 email: '',
                 phone: '',
-                field: FIELDS[0],
+                field: activeFields.length > 0 ? activeFields[0].name : '',
                 experience: EXPERIENCE[0],
                 status: 'Actively Looking',
                 availability: AVAILABILITY[0],
@@ -62,10 +71,17 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                 skills: [],
             });
         }
-    }, [candidate, isOpen]);
+    }, [candidate, isOpen, activeFields]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validate that a field is selected
+        if (!formData.field) {
+            alert('Please select a field');
+            return;
+        }
+
         setLoading(true);
         try {
             // Auto-generate salary_range from min/max
@@ -84,8 +100,8 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl w-full max-w-2xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">{title}</h2>
                     <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg">
@@ -94,7 +110,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                             <input
@@ -117,7 +133,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                             <input
@@ -129,19 +145,29 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Field *</label>
-                            <select
-                                value={formData.field}
-                                onChange={(e) => setFormData({ ...formData, field: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                {FIELDS.map(field => (
-                                    <option key={field} value={field}>{field}</option>
-                                ))}
-                            </select>
+                            {activeFields.length === 0 ? (
+                                <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded-lg">
+                                    No active fields available. Please add fields in the Fields management page first.
+                                </div>
+                            ) : (
+                                <select
+                                    required
+                                    value={formData.field}
+                                    onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">Select a field</option>
+                                    {activeFields.map(field => (
+                                        <option key={field.id} value={field.name}>
+                                            {field.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
                             <select
@@ -168,7 +194,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
                             <select
@@ -187,7 +213,7 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                                 <input
                                     type="number"
                                     value={formData.salary_min}
-                                    onChange={(e) => setFormData({ ...formData, salary_min: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, salary_min: parseInt(e.target.value) || 0 })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
@@ -196,25 +222,29 @@ export const CandidateModal = ({ isOpen, onClose, onSubmit, candidate, title }: 
                                 <input
                                     type="number"
                                     value={formData.salary_max}
-                                    onChange={(e) => setFormData({ ...formData, salary_max: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, salary_max: parseInt(e.target.value) || 0 })}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="w-full sm:flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            disabled={loading || activeFields.length === 0}
+                            className={`w-full sm:flex-1 px-4 py-2 rounded-lg transition-colors
+                                ${loading || activeFields.length === 0 
+                                    ? 'bg-gray-400 cursor-not-allowed' 
+                                    : 'bg-blue-600 hover:bg-blue-700'} 
+                                text-white`}
                         >
                             {loading ? 'Saving...' : 'Save'}
                         </button>

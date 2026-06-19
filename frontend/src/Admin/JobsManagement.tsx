@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Users, UserPlus, Sparkles, Search, Filter } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useJobs } from '../hooks/useJobs';
+import { useFields } from '../hooks/useFields';
 import { ApplicantsModal } from '../components/admin/ApplicantsModal';
 import type { Job } from '../types/job';
 
 export default function JobsManagement() {
   const { jobs, loading, createJob, updateJob, deleteJob } = useJobs();
+  const { fields, fetchFields } = useFields();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showApplicantsModal, setShowApplicantsModal] = useState(false);
@@ -28,10 +30,17 @@ export default function JobsManagement() {
     status: 'Open' as 'Open' | 'Closed' | 'On Hold'
   });
 
-  const fields = ['Software Development', 'Data Science', 'UI/UX Design', 'Marketing', 'Sales', 'HR'];
+  // Fetch fields when component mounts
+  useEffect(() => {
+    fetchFields();
+  }, []);
+
   const experienceLevels = ['Fresher (0-1 years)', '1-3 years', '3-5 years', '5+ years'];
   const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
   const statuses: Array<'Open' | 'Closed' | 'On Hold'> = ['Open', 'Closed', 'On Hold'];
+
+  // Get active fields for the dropdown
+  const activeFields = fields.filter(field => field.status === 'Active');
 
   // Filter jobs
   const filteredJobs = jobs.filter(job => {
@@ -304,17 +313,23 @@ export default function JobsManagement() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Field/Category *</label>
-                  <select
-                    required
-                    value={formData.field}
-                    onChange={(e) => setFormData({ ...formData, field: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select field</option>
-                    {fields.map(field => (
-                      <option key={field} value={field}>{field}</option>
-                    ))}
-                  </select>
+                  {activeFields.length === 0 ? (
+                    <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                      No active fields available. Please add fields in the Fields management page first.
+                    </div>
+                  ) : (
+                    <select
+                      required
+                      value={formData.field}
+                      onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select field</option>
+                      {activeFields.map(field => (
+                        <option key={field.id} value={field.name}>{field.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
@@ -510,17 +525,23 @@ export default function JobsManagement() {
 
                   <div>
                     <label className="block text-sm font-medium mb-1">Field/Category *</label>
-                    <select
-                      required
-                      value={formData.field}
-                      onChange={(e) => setFormData({ ...formData, field: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select field</option>
-                      {fields.map(field => (
-                        <option key={field} value={field}>{field}</option>
-                      ))}
-                    </select>
+                    {activeFields.length === 0 ? (
+                      <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                        No active fields available. Please add fields in the Fields management page first.
+                      </div>
+                    ) : (
+                      <select
+                        required
+                        value={formData.field}
+                        onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select field</option>
+                        {activeFields.map(field => (
+                          <option key={field.id} value={field.name}>{field.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
 
                   <div>

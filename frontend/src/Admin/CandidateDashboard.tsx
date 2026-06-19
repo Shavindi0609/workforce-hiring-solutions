@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 import { useCandidates } from '../hooks/useCandidates';
+import { useFields } from '../hooks/useFields';
 import { CandidateModal } from '../components/CandidateModal';
 import type { Candidate, CreateCandidateDto } from '../types/candidate';
 import CandidateDetailsModal from '../components/admin/CandidateDetailsModal';
@@ -28,9 +29,16 @@ export default function CandidatesPage() {
         getStatistics 
     } = useCandidates();
 
+    const { fields, fetchFields } = useFields();
+
+    // Fetch fields when component mounts
+    useEffect(() => {
+        fetchFields();
+    }, []);
+
     const stats = getStatistics();
 
-    // Get unique filters
+    // Get unique filters from candidates
     const uniqueFields = ['All Fields', ...new Set(candidates.map(c => c.field))];
     const uniqueStatuses = ['All', ...new Set(candidates.map(c => c.status))];
     const uniqueAvailability = ['All', ...new Set(candidates.map(c => c.availability))];
@@ -291,6 +299,7 @@ export default function CandidatesPage() {
                     onSubmit={handleSubmit}
                     candidate={selectedCandidate}
                     title={modalTitle}
+                    fields={fields}
                 />
             </div>
 

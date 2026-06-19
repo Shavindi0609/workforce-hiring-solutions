@@ -301,7 +301,7 @@ const ExportData: React.FC = () => {
                     <FaFileCsv className="text-xl" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-700">CSV Format</h4>
+                    <h4 className="text-sm font-semibold text-slate-700">CSV</h4>
                   </div>
                 </div>
               </div>

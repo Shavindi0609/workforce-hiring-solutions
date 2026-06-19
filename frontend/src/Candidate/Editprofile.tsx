@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { ArrowLeft, Check, Save, X, FileText, Upload } from 'lucide-react';
+import { useFields } from '../hooks/useFields';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -25,12 +26,6 @@ interface ProfileForm {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const FIELDS_OPTIONS = [
-  'Software Engineering', 'Data Science', 'Product Management',
-  'UX/UI Design', 'Marketing', 'Finance', 'Human Resources',
-  'Sales', 'Operations', 'Other',
-];
 
 const EXPERIENCE_OPTIONS = [
   'Less than 1 year', '1-2 years', '3-5 years',
@@ -128,6 +123,7 @@ const selectCls = inputCls + " cursor-pointer";
 export default function EditProfile() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { fields, fetchFields, loading: fieldsLoading } = useFields();
 
   const [form, setForm] = useState<ProfileForm>({
     name: '', email: '', phone: '', country_code: '+94', dob: '', linkedin: '',
@@ -141,6 +137,11 @@ export default function EditProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // ── Fetch fields ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchFields();
+  }, []);
 
   // ── Fetch existing profile ─────────────────────────────────────────────────
   useEffect(() => {
@@ -257,8 +258,11 @@ export default function EditProfile() {
     }
   };
 
+  // Get active fields for the dropdown
+  const activeFields = fields.filter(field => field.status === 'Active');
+
   // ── Loading ────────────────────────────────────────────────────────────────
-  if (loading) {
+  if (loading || fieldsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
@@ -347,10 +351,24 @@ export default function EditProfile() {
           <Section title="Professional Information">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Interested Field">
-                <select className={selectCls} value={form.interested_field} onChange={(e) => set('interested_field', e.target.value)}>
-                  <option value="">Select field</option>
-                  {FIELDS_OPTIONS.map((f) => <option key={f}>{f}</option>)}
-                </select>
+                {activeFields.length === 0 ? (
+                  <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                    No active fields available. Please contact admin to add fields.
+                  </div>
+                ) : (
+                  <select 
+                    className={selectCls} 
+                    value={form.interested_field} 
+                    onChange={(e) => set('interested_field', e.target.value)}
+                  >
+                    <option value="">Select field</option>
+                    {activeFields.map((field) => (
+                      <option key={field.id} value={field.name}>
+                        {field.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </Field>
               <Field label="Years of Experience">
                 <select className={selectCls} value={form.years_of_experience} onChange={(e) => set('years_of_experience', e.target.value)}>
