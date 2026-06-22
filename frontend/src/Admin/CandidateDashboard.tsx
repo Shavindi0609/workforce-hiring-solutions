@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useMemo, useCallback } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
 import { useCandidates } from '../hooks/useCandidates';
 import { useFields } from '../hooks/useFields';
@@ -30,75 +30,76 @@ export default function CandidatesPage() {
     } = useCandidates();
 
     const { fields, fetchFields } = useFields();
-
+    
     // Fetch fields when component mounts
     useEffect(() => {
         fetchFields();
-    }, []);
+    }, [fetchFields]);
 
-    const stats = getStatistics();
+    const stats = useMemo(() => getStatistics(), [getStatistics]);
 
     // Get unique filters from candidates
-    const uniqueFields = ['All Fields', ...new Set(candidates.map(c => c.field))];
-    const uniqueStatuses = ['All', ...new Set(candidates.map(c => c.status))];
-    const uniqueAvailability = ['All', ...new Set(candidates.map(c => c.availability))];
+    const uniqueFields = useMemo(() => ['All Fields', ...new Set(candidates.map(c => c.field))],[candidates]);
+    const uniqueStatuses = useMemo(() => ['All', ...new Set(candidates.map(c => c.status))],[candidates]);
+    const uniqueAvailability = useMemo(() => ['All', ...new Set(candidates.map(c => c.availability))],[candidates]);
 
     // Apply filters
-    const filteredCandidates = candidates.filter(candidate => {
-        const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             candidate.field.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesField = fieldFilter === 'All Fields' || candidate.field === fieldFilter;
-        const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
-        const matchesAvailability = availabilityFilter === 'All' || candidate.availability === availabilityFilter;
-        return matchesSearch && matchesField && matchesStatus && matchesAvailability;
-    });
+    const filteredCandidates = useMemo(() => {
+        return candidates.filter(candidate => {
+            const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 candidate.field.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesField = fieldFilter === 'All Fields' || candidate.field === fieldFilter;
+            const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
+            const matchesAvailability = availabilityFilter === 'All' || candidate.availability === availabilityFilter;
+            return matchesSearch && matchesField && matchesStatus && matchesAvailability;
+        });
+    }, [candidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
 
-    const handleAddCandidate = () => {
+    const handleAddCandidate = useCallback(() => {
         setSelectedCandidate(null);
         setModalTitle('Add New Candidate');
         setIsModalOpen(true);
-    };
+    }, []);
 
-    const handleEditCandidate = (candidate: Candidate) => {
+    const handleEditCandidate = useCallback((candidate: Candidate) => {
         setSelectedCandidate(candidate);
         setModalTitle('Edit Candidate');
         setIsModalOpen(true);
-    };
+    }, []);
 
-    const handleDeleteCandidate = async (id: string) => {
+    const handleDeleteCandidate = useCallback(async (id: string) => {
         if (window.confirm('Are you sure you want to delete this candidate?')) {
             await deleteCandidate(id);
         }
-    };
+    }, [deleteCandidate]);
 
-    const handleSubmit = async (data: CreateCandidateDto | Partial<Candidate>) => {
+    const handleSubmit = useCallback(async (data: CreateCandidateDto | Partial<Candidate>) => {
         if (selectedCandidate) {
             await updateCandidate(selectedCandidate.id, data);
         } else {
             await createCandidate(data as CreateCandidateDto);
         }
-    };
+    }, [selectedCandidate, updateCandidate, createCandidate]);
 
-    const handleApplyFilters = () => {
+    const handleApplyFilters = useCallback(() => {
         fetchCandidates({
             search: searchTerm,
             field: fieldFilter,
             status: statusFilter,
             availability: availabilityFilter
         });
-    };
+    }, [fetchCandidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
 
-    // Handle view candidate details
-    const handleViewCandidate = (candidateId: string) => {
+    const handleViewCandidate = useCallback((candidateId: string) => {
         setSelectedCandidateId(candidateId);
         setIsDetailsModalOpen(true);
-    };
+    }, []);
 
-    const handleCloseDetailsModal = () => {
+    const handleCloseDetailsModal = useCallback(() => {
         setIsDetailsModalOpen(false);
         setSelectedCandidateId(null);
-    };
+    }, []);
 
     if (loading) {
         return (
@@ -314,7 +315,19 @@ export default function CandidatesPage() {
     );
 }
 
-const StatCard = ({ title, value, sub, color = "text-gray-900" }: any) => (
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    sub: string;
+    color?: string;
+}
+
+const StatCard = ({ 
+    title, 
+    value, 
+    sub, 
+    color = "text-gray-900" 
+}: StatCardProps) => (
     <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-sm transition-all hover:shadow-md">
         <p className="text-gray-400 text-[10px] sm:text-xs uppercase tracking-wider">{title}</p>
         <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold ${color} mt-1 sm:mt-2`}>{value}</h3>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { X } from 'lucide-react';
 import type { Candidate, CreateCandidateDto } from '../types/candidate';
 
@@ -8,7 +8,7 @@ interface CandidateModalProps {
     onSubmit: (data: CreateCandidateDto | Partial<Candidate>) => Promise<void>;
     candidate?: Candidate | null;
     title: string;
-    fields?: Array<{ id: string; name: string; status: string }>; // Add fields prop
+    fields?: Array<{ id: string; name: string; status: string }>;
 }
 
 const STATUSES = ['Actively Looking', 'Open to Opportunities'];
@@ -38,16 +38,23 @@ export const CandidateModal = ({
     });
     const [loading, setLoading] = useState(false);
 
-    // Get active fields (only show active fields in dropdown)
-    const activeFields = fields.filter(field => field.status === 'Active');
+    const activeFields = useMemo(() => 
+        fields.filter(field => field.status === 'Active'),
+        [fields] 
+    );
+
+    const defaultFieldName = useMemo(() => 
+        activeFields.length > 0 ? activeFields[0].name : '',
+        [activeFields] 
+    );
 
     useEffect(() => {
         if (candidate) {
             setFormData({
-                name: candidate.name,
-                email: candidate.email,
+                name: candidate.name || '',
+                email: candidate.email || '',
                 phone: candidate.phone || '',
-                field: candidate.field,
+                field: candidate.field || defaultFieldName,
                 experience: candidate.experience || EXPERIENCE[0],
                 status: candidate.status || 'Actively Looking',
                 availability: candidate.availability || AVAILABILITY[0],
@@ -61,7 +68,7 @@ export const CandidateModal = ({
                 name: '',
                 email: '',
                 phone: '',
-                field: activeFields.length > 0 ? activeFields[0].name : '',
+                field: defaultFieldName,
                 experience: EXPERIENCE[0],
                 status: 'Actively Looking',
                 availability: AVAILABILITY[0],
@@ -71,12 +78,29 @@ export const CandidateModal = ({
                 skills: [],
             });
         }
-    }, [candidate, isOpen, activeFields]);
+    }, [candidate, defaultFieldName]); 
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    useEffect(() => {
+        if (!isOpen) {
+            setFormData({
+                name: '',
+                email: '',
+                phone: '',
+                field: defaultFieldName,
+                experience: EXPERIENCE[0],
+                status: 'Actively Looking',
+                availability: AVAILABILITY[0],
+                salary_min: 0,
+                salary_max: 0,
+                salary_range: '',
+                skills: [],
+            });
+        }
+    }, [isOpen, defaultFieldName]); 
+
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Validate that a field is selected
         if (!formData.field) {
             alert('Please select a field');
             return;
@@ -84,18 +108,28 @@ export const CandidateModal = ({
 
         setLoading(true);
         try {
-            // Auto-generate salary_range from min/max
+            const submitData = { ...formData };
             if (formData.salary_min && formData.salary_max) {
-                formData.salary_range = `${formData.salary_min.toLocaleString()} - ${formData.salary_max.toLocaleString()}`;
+                submitData.salary_range = `${formData.salary_min.toLocaleString()} - ${formData.salary_max.toLocaleString()}`;
             }
-            await onSubmit(formData);
+            await onSubmit(submitData);
             onClose();
         } catch (error) {
             console.error('Error:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [formData, onSubmit, onClose]);
+
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }, []);
+
+    const handleSelectChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }, []);
 
     if (!isOpen) return null;
 
@@ -115,9 +149,10 @@ export const CandidateModal = ({
                             <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                             <input
                                 type="text"
+                                name="name"
                                 required
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                onChange={handleInputChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -125,9 +160,10 @@ export const CandidateModal = ({
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                             <input
                                 type="email"
+                                name="email"
                                 required
                                 value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                onChange={handleInputChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -138,8 +174,9 @@ export const CandidateModal = ({
                             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                             <input
                                 type="tel"
+                                name="phone"
                                 value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                onChange={handleInputChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -151,9 +188,10 @@ export const CandidateModal = ({
                                 </div>
                             ) : (
                                 <select
+                                    name="field"
                                     required
                                     value={formData.field}
-                                    onChange={(e) => setFormData({ ...formData, field: e.target.value })}
+                                    onChange={handleSelectChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">Select a field</option>
@@ -171,8 +209,9 @@ export const CandidateModal = ({
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
                             <select
+                                name="experience"
                                 value={formData.experience}
-                                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                                onChange={handleSelectChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 {EXPERIENCE.map(exp => (
@@ -183,8 +222,9 @@ export const CandidateModal = ({
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select
+                                name="status"
                                 value={formData.status}
-                                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                                onChange={handleSelectChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 {STATUSES.map(status => (
@@ -198,8 +238,9 @@ export const CandidateModal = ({
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
                             <select
+                                name="availability"
                                 value={formData.availability}
-                                onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
+                                onChange={handleSelectChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 {AVAILABILITY.map(avail => (
@@ -212,8 +253,12 @@ export const CandidateModal = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Min Salary</label>
                                 <input
                                     type="number"
+                                    name="salary_min"
                                     value={formData.salary_min}
-                                    onChange={(e) => setFormData({ ...formData, salary_min: parseInt(e.target.value) || 0 })}
+                                    onChange={(e) => setFormData(prev => ({ 
+                                        ...prev, 
+                                        salary_min: parseInt(e.target.value) || 0 
+                                    }))}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
@@ -221,8 +266,12 @@ export const CandidateModal = ({
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Max Salary</label>
                                 <input
                                     type="number"
+                                    name="salary_max"
                                     value={formData.salary_max}
-                                    onChange={(e) => setFormData({ ...formData, salary_max: parseInt(e.target.value) || 0 })}
+                                    onChange={(e) => setFormData(prev => ({ 
+                                        ...prev, 
+                                        salary_max: parseInt(e.target.value) || 0 
+                                    }))}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
