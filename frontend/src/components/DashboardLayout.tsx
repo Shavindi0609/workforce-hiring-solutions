@@ -4,7 +4,7 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
   UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase, FileText, Camera,
-  Save, AlertCircle, Trash2, Users, CheckCircle
+  Save, AlertCircle, Trash2, Users, CheckCircle, CheckCheck
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import securityImage from '../assets/8.avif';
@@ -18,6 +18,31 @@ interface Notification {
   created_at: string;
   data: any;
 }
+
+// Helper functions for localStorage persistence
+const getStorageKey = (userId: string) => `deleted_notifications_${userId}`;
+
+const loadDeletedIds = (userId: string): Set<string> => {
+  try {
+    const stored = localStorage.getItem(getStorageKey(userId));
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return new Set(parsed);
+    }
+  } catch (error) {
+    console.error('Error loading deleted IDs from localStorage:', error);
+  }
+  return new Set();
+};
+
+const saveDeletedIds = (userId: string, ids: Set<string>) => {
+  try {
+    const array = Array.from(ids);
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(array));
+  } catch (error) {
+    console.error('Error saving deleted IDs to localStorage:', error);
+  }
+};
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -34,6 +59,8 @@ export default function DashboardLayout() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({
     full_name: '',
     email: '',
@@ -46,10 +73,19 @@ export default function DashboardLayout() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const channelRef = useRef<any>(null);
+  const clearTimeoutRef = useRef<number | null>(null);
+  const isDeletingRef = useRef<boolean>(false);
+  const deletedIdsRef = useRef<Set<string>>(new Set());
 
   // Fetch notifications
   const fetchNotifications = async () => {
     if (!user) return;
+
+    if (isDeletingRef.current) {
+      console.log('Currently deleting, skipping fetch');
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -61,11 +97,120 @@ export default function DashboardLayout() {
 
       if (error) throw error;
 
-      setNotifications(data || []);
-      const unread = data?.filter(n => !n.read).length || 0;
+      // Load deleted IDs from localStorage
+      const deletedIds = loadDeletedIds(user.id);
+      deletedIdsRef.current = deletedIds;
+
+      const filteredData = data?.filter(n => !deletedIdsRef.current.has(n.id)) || [];
+      
+      setNotifications(filteredData);
+      const unread = filteredData?.filter(n => !n.read).length || 0;
       setUnreadCount(unread);
     } catch (err) {
       console.error('Error fetching notifications:', err);
+    }
+  };
+
+  // Delete single notification
+  const deleteSingleNotification = async (notificationId: string) => {
+    if (!user) return;
+
+    setNotificationToDelete(notificationId);
+    setShowDeleteConfirm(true);
+  };
+
+  // Confirm delete single notification
+  const confirmDeleteSingle = async () => {
+    if (!notificationToDelete || !user) return;
+
+    isDeletingRef.current = true;
+
+    try {
+      // Add to deleted set
+      deletedIdsRef.current.add(notificationToDelete);
+      // Save to localStorage
+      saveDeletedIds(user.id, deletedIdsRef.current);
+
+      // PERMANENTLY DELETE from database
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationToDelete);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setNotifications(prev => prev.filter(n => n.id !== notificationToDelete));
+      
+      // Update unread count
+      const unread = notifications.filter(n => n.id !== notificationToDelete && !n.read).length;
+      setUnreadCount(unread);
+
+      setSuccessMessage('Notification deleted successfully!');
+      setShowDeleteConfirm(false);
+      setNotificationToDelete(null);
+      
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+      setUploadError('Failed to delete notification. Please try again.');
+      setTimeout(() => setUploadError(null), 3000);
+    } finally {
+      isDeletingRef.current = false;
+    }
+  };
+
+  // Clear all notifications - PERMANENT DELETE
+  const clearAllNotifications = async () => {
+    if (!user || notifications.length === 0) return;
+
+    if (clearTimeoutRef.current) {
+      clearTimeout(clearTimeoutRef.current);
+      clearTimeoutRef.current = null;
+    }
+
+    isDeletingRef.current = true;
+
+    try {
+      const notificationIds = notifications.map(n => n.id);
+      
+      if (notificationIds.length === 0) {
+        isDeletingRef.current = false;
+        return;
+      }
+
+      // Add all IDs to deleted set
+      notificationIds.forEach(id => deletedIdsRef.current.add(id));
+      // Save to localStorage
+      saveDeletedIds(user.id, deletedIdsRef.current);
+
+      // PERMANENTLY DELETE from database
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .in('id', notificationIds);
+
+      if (error) throw error;
+
+      setNotifications([]);
+      setUnreadCount(0);
+      setIsNotificationsOpen(false);
+      
+      setSuccessMessage('All notifications permanently deleted!');
+      
+      clearTimeoutRef.current = setTimeout(() => {
+        isDeletingRef.current = false;
+        clearTimeoutRef.current = null;
+      }, 2000);
+      
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+    } catch (err) {
+      console.error('Error clearing notifications:', err);
+      setUploadError('Failed to clear notifications. Please try again.');
+      isDeletingRef.current = false;
+      setTimeout(() => setUploadError(null), 3000);
     }
   };
 
@@ -112,25 +257,38 @@ export default function DashboardLayout() {
     }
   };
 
-  // Handle notification click
-  const handleNotificationClick = async (notification: Notification) => {
+  // Handle notification click - Navigate to jobs page
+  const handleNotificationClick = async (notification: Notification, e: React.MouseEvent) => {
+    // Prevent click if delete button was clicked
+    if ((e.target as HTMLElement).closest('.delete-notification-btn')) {
+      return;
+    }
+
     if (!notification.read) {
       await markAsRead(notification.id);
     }
 
     setIsNotificationsOpen(false);
 
-    // Navigate based on notification type
-    if (notification.type === 'new_candidate') {
-      navigate('/admin/candidate-dashboard');
-    } else if (notification.type === 'new_job_application') {
+    // Navigate to jobs page for job-related notifications
+    if (notification.type === 'new_job_application' || notification.type === 'job_update') {
       navigate('/admin/jobs');
+    } else if (notification.type === 'new_candidate') {
+      navigate('/admin/candidate-dashboard');
+    } else {
+      // Default fallback
+      navigate('/admin/dashboard');
     }
   };
 
-  // Setup real-time subscription for new notifications
+  // Setup real-time subscription
   useEffect(() => {
     if (!user) return;
+
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
 
     const channel = supabase
       .channel('notifications-channel')
@@ -144,13 +302,31 @@ export default function DashboardLayout() {
         },
         (payload) => {
           console.log('New notification received:', payload);
+          
+          if (isDeletingRef.current) {
+            console.log('Currently deleting, ignoring new notification');
+            return;
+          }
+          
           const newNotification = payload.new as Notification;
           
-          // Add to state
-          setNotifications(prev => [newNotification, ...prev]);
-          setUnreadCount(prev => prev + 1);
+          if (deletedIdsRef.current.has(newNotification.id)) {
+            console.log('Notification was permanently deleted, ignoring');
+            return;
+          }
           
-          // Show browser notification
+          setNotifications(prev => {
+            const exists = prev.some(n => n.id === newNotification.id);
+            if (exists) return prev;
+            
+            const updated = [newNotification, ...prev];
+            return updated.slice(0, 50);
+          });
+          
+          if (!newNotification.read) {
+            setUnreadCount(prev => prev + 1);
+          }
+          
           if (Notification.permission === 'granted') {
             new Notification(newNotification.title, {
               body: newNotification.message,
@@ -159,13 +335,53 @@ export default function DashboardLayout() {
           }
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Notification deleted:', payload);
+          const oldId = payload.old?.id;
+          
+          if (oldId && user) {
+            deletedIdsRef.current.add(oldId);
+            // Save to localStorage
+            saveDeletedIds(user.id, deletedIdsRef.current);
+            
+            setNotifications(prev => {
+              const filtered = prev.filter(n => n.id !== oldId);
+              console.log(`Permanently removed notification ${oldId}, remaining: ${filtered.length}`);
+              return filtered;
+            });
+            
+            const unread = notifications.filter(n => n.id !== oldId && !n.read).length;
+            setUnreadCount(unread);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
+
+    channelRef.current = channel;
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+        clearTimeoutRef.current = null;
+      }
     };
   }, [user]);
 
+  // Get user
   useEffect(() => {
     const getUser = async () => {
       try {
@@ -175,6 +391,10 @@ export default function DashboardLayout() {
         
         if (user) {
           setUser(user);
+          
+          // Load deleted IDs from localStorage
+          const deletedIds = loadDeletedIds(user.id);
+          deletedIdsRef.current = deletedIds;
           
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
@@ -216,10 +436,8 @@ export default function DashboardLayout() {
             });
           }
 
-          // Fetch notifications
           await fetchNotifications();
           
-          // Request notification permission
           if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
           }
@@ -239,6 +457,11 @@ export default function DashboardLayout() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user);
+        
+        // Load deleted IDs from localStorage for the new session
+        const deletedIds = loadDeletedIds(session.user.id);
+        deletedIdsRef.current = deletedIds;
+        
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -255,14 +478,28 @@ export default function DashboardLayout() {
             role: profile.role || ''
           });
         }
+        await fetchNotifications();
       } else {
         setUser(null);
         setUserProfile(null);
+        setNotifications([]);
+        setUnreadCount(0);
+        // Clear deleted IDs on logout
+        deletedIdsRef.current.clear();
+        // Don't clear localStorage - keep the deleted IDs persisted
       }
     });
     
     return () => {
       subscription.unsubscribe();
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+        clearTimeoutRef.current = null;
+      }
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [navigate]);
 
@@ -279,10 +516,29 @@ export default function DashboardLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      if (clearTimeoutRef.current) {
+        clearTimeout(clearTimeoutRef.current);
+        clearTimeoutRef.current = null;
+      }
+      isDeletingRef.current = false;
+    };
+  }, []);
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setNotifications([]);
+      setUnreadCount(0);
+      // Clear the in-memory set but keep localStorage
+      deletedIdsRef.current.clear();
+      isDeletingRef.current = false;
       navigate('/signin');
     } catch (error) {
       console.error('Error logging out:', error);
@@ -297,7 +553,7 @@ export default function DashboardLayout() {
     }
   };
 
-  // Image handling functions (same as your existing code)
+  // Image handling functions
   const extractFilePath = (url: string) => {
     try {
       const urlObj = new URL(url);
@@ -506,7 +762,42 @@ export default function DashboardLayout() {
     }
   };
 
-  // Modal components (same as your existing code)
+  // Delete Confirmation Modal
+  const DeleteConfirmModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+            <Trash2 size={24} className="text-red-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800">Delete Notification</h3>
+        </div>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete this notification? This action cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => {
+              setShowDeleteConfirm(false);
+              setNotificationToDelete(null);
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmDeleteSingle}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+          >
+            <Trash2 size={16} />
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Remove Confirm Modal
   const RemoveConfirmModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -747,20 +1038,45 @@ export default function DashboardLayout() {
               {isNotificationsOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsNotificationsOpen(false)}></div>
-                  <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                  <div 
+                    className="absolute mt-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+                    style={{ 
+                      right: '0',
+                      left: 'auto',
+                      width: 'min(calc(100vw - 1rem), 384px)',
+                      maxWidth: 'calc(100vw - 1rem)'
+                    }}
+                  >
                     <div className="flex items-center justify-between p-4 border-b border-gray-100">
                       <h3 className="font-semibold text-gray-800">Notifications</h3>
-                      {unreadCount > 0 && (
-                        <button 
-                          onClick={markAllAsRead}
-                          className="text-xs text-blue-600 hover:text-blue-700"
-                        >
-                          Mark all as read
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {notifications.length > 0 && (
+                          <button 
+                            onClick={clearAllNotifications}
+                            className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 whitespace-nowrap"
+                          >
+                            <Trash2 size={14} />
+                            <span className="hidden sm:inline">Clear All</span>
+                          </button>
+                        )}
+                        {unreadCount > 0 && (
+                          <button 
+                            onClick={markAllAsRead}
+                            className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 whitespace-nowrap"
+                          >
+                            <CheckCheck size={14} />
+                            <span className="hidden sm:inline">Mark all read</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="max-h-[400px] overflow-y-auto">
+                      {successMessage && (
+                        <div className="mx-4 mb-2 p-2 bg-green-50 text-green-700 rounded-lg text-sm text-center">
+                          {successMessage}
+                        </div>
+                      )}
                       {notifications.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
                           <Bell size={40} className="text-gray-300 mb-2" />
@@ -769,35 +1085,47 @@ export default function DashboardLayout() {
                         </div>
                       ) : (
                         notifications.map((notification) => (
-                          <button
+                          <div
                             key={notification.id}
-                            onClick={() => handleNotificationClick(notification)}
-                            className={`w-full text-left p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
+                            className={`relative w-full text-left border-b border-gray-50 hover:bg-gray-50 transition-colors ${
                               !notification.read ? 'bg-blue-50/30' : ''
                             }`}
                           >
-                            <div className="flex gap-3">
-                              <div className="flex-shrink-0 mt-1">
-                                {getNotificationIcon(notification.type)}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800' : 'text-gray-600'}`}>
-                                    {notification.title}
-                                  </p>
-                                  <span className="text-xs text-gray-400 flex-shrink-0">
-                                    {formatNotificationTime(notification.created_at)}
-                                  </span>
+                            <button
+                              onClick={(e) => handleNotificationClick(notification, e)}
+                              className="w-full text-left p-4 pr-12"
+                            >
+                              <div className="flex gap-3">
+                                <div className="flex-shrink-0 mt-1">
+                                  {getNotificationIcon(notification.type)}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">{notification.message}</p>
-                              </div>
-                              {!notification.read && (
-                                <div className="flex-shrink-0">
-                                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-800' : 'text-gray-600'} truncate`}>
+                                      {notification.title}
+                                    </p>
+                                    <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                                      {formatNotificationTime(notification.created_at)}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1 break-words">{notification.message}</p>
                                 </div>
-                              )}
-                            </div>
-                          </button>
+                                {!notification.read && (
+                                  <div className="flex-shrink-0">
+                                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                            {/* Delete button for single notification */}
+                            <button
+                              onClick={() => deleteSingleNotification(notification.id)}
+                              className="delete-notification-btn absolute top-2 right-2 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Delete notification"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         ))
                       )}
                     </div>
@@ -809,32 +1137,40 @@ export default function DashboardLayout() {
             {/* Profile Dropdown */}
             <div className="relative">
               <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                   {userProfile?.avatar_url ? (
                     <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <User size={18} className="text-white" />
                   )}
                 </div>
-                <span className="text-sm font-medium text-gray-700 hidden md:block">{getDisplayName()}</span>
+                <span className="text-sm font-medium text-gray-700 hidden md:block truncate max-w-[100px]">{getDisplayName()}</span>
                 <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 hidden md:block ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isProfileOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+                  <div 
+                    className="absolute mt-2 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden"
+                    style={{ 
+                      right: '0',
+                      left: 'auto',
+                      width: 'min(calc(100vw - 1rem), 320px)',
+                      maxWidth: 'calc(100vw - 1rem)'
+                    }}
+                  >
                     <div className="p-4 border-b border-gray-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden">
+                        <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                           {userProfile?.avatar_url ? (
                             <img src={userProfile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                           ) : (
                             <User size={28} className="text-white" />
                           )}
                         </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-800">{getDisplayName()}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-800 truncate">{getDisplayName()}</p>
                           <p className="text-sm text-gray-500 truncate">{user?.email}</p>
                           {userProfile?.role && (
                             <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1 inline-block">
@@ -868,7 +1204,7 @@ export default function DashboardLayout() {
         </div>
       </nav>
 
-      {/* Sidebar - keep your existing sidebar code */}
+      {/* Sidebar */}
       <aside className={`fixed left-0 top-0 bottom-0 z-30 bg-white border-r border-gray-200 overflow-y-auto transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'} hidden lg:block`}>
         <div className="flex flex-col h-full">
           <div className={`px-4 pt-6 pb-6 ${!sidebarOpen && 'flex justify-center'}`}>
@@ -981,6 +1317,7 @@ export default function DashboardLayout() {
 
       {editingProfile && <ProfileEditModal />}
       {showRemoveConfirm && <RemoveConfirmModal />}
+      {showDeleteConfirm && <DeleteConfirmModal />}
 
       <main className={`transition-all duration-300 min-h-screen ${sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'} pl-0`}>
         <div className="pt-[57px]">
