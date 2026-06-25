@@ -373,7 +373,7 @@ const SettingsPage: React.FC = () => {
 
             {activeTab !== 'general' && (
               <div className="text-center py-12 px-4">
-                <div className="text-5xl mb-4 text-blue-500">
+                <div className="text-5xl mb-4 text-blue-500 flex justify-center">
                   {menuItems.find(item => item.id === activeTab)?.icon}
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-2">
