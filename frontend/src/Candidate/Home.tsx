@@ -153,7 +153,7 @@ export default function Home() {
               className=" inline-flex px-4 py-2 rounded-xl text-[14px] font-semibold text-[#0b3d6b] border border-[#0b3d6b]/30 hover:border-[#0b3d6b] hover:bg-[#0b3d6b]/5 transition-all">
               Sign In
             </Link>
-            <Link to="/candidate/registration/basic"
+            <Link to="/signin"
               className=" hidden sm:inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-[14px] font-semibold text-white bg-gradient-to-r from-[#0b3d6b] to-[#1a5490] hover:from-[#1a5490] hover:to-[#0e8c7a] shadow-md hover:shadow-lg transition-all">
               Join Talent Pool <ChevronRight size={14} />
             </Link>
@@ -197,7 +197,7 @@ export default function Home() {
 
             {/* Two audience CTAs */}
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
-              <Link to="/candidate/registration/basic"
+              <Link to="/signin"
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-[#2fb852] to-[#0e8c7a] text-white font-bold text-[15px] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
                 <UserCheck size={18} /> Join as Candidate
               </Link>
@@ -383,7 +383,7 @@ export default function Home() {
               ))}
             </ul>
 
-            <Link to="/candidate/registration/basic"
+            <Link to="/signin"
               className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-[14px] font-bold text-white bg-gradient-to-r from-[#0b3d6b] to-[#0e8c7a] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
               Register as a Candidate <ArrowRight size={15} />
             </Link>
@@ -565,7 +565,7 @@ export default function Home() {
             WHS is here to make it happen.
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Link to="/candidate/registration/basic"
+            <Link to="/signin"
               className="px-8 py-4 rounded-xl bg-white text-[#0b3d6b] text-[15px] font-black hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all">
               Join as a Candidate
             </Link>
