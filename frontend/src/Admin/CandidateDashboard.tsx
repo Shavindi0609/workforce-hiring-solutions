@@ -1,10 +1,17 @@
-import { useState, useEffect,useMemo, useCallback } from 'react';
-import { Search, Plus, Eye, Edit2, Trash2 } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, Plus, Eye, Edit2, Trash2, Download } from 'lucide-react';
 import { useCandidates } from '../hooks/useCandidates';
 import { useFields } from '../hooks/useFields';
 import { CandidateModal } from '../components/CandidateModal';
 import type { Candidate, CreateCandidateDto } from '../types/candidate';
 import CandidateDetailsModal from '../components/admin/CandidateDetailsModal';
+import toast from 'react-hot-toast';
+
+function generateCandidateId(id: string, createdAt: string): string {
+    const year = new Date(createdAt).getFullYear();
+    const shortId = id.replace(/-/g, "").slice(0, 4).toUpperCase();
+    return `WHS-${year}-${shortId}`;
+}
 
 export default function CandidatesPage() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -14,8 +21,9 @@ export default function CandidatesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
     const [modalTitle, setModalTitle] = useState('');
+    const [isExporting, setIsExporting] = useState(false);
+    const [showExportOptions, setShowExportOptions] = useState(false);
     
-    // State for candidate details modal
     const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
@@ -31,19 +39,16 @@ export default function CandidatesPage() {
 
     const { fields, fetchFields } = useFields();
     
-    // Fetch fields when component mounts
     useEffect(() => {
         fetchFields();
     }, [fetchFields]);
 
     const stats = useMemo(() => getStatistics(), [getStatistics]);
 
-    // Get unique filters from candidates
     const uniqueFields = useMemo(() => ['All Fields', ...new Set(candidates.map(c => c.field))],[candidates]);
     const uniqueStatuses = useMemo(() => ['All', ...new Set(candidates.map(c => c.status))],[candidates]);
     const uniqueAvailability = useMemo(() => ['All', ...new Set(candidates.map(c => c.availability))],[candidates]);
 
-    // Apply filters
     const filteredCandidates = useMemo(() => {
         return candidates.filter(candidate => {
             const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,6 +106,184 @@ export default function CandidatesPage() {
         setSelectedCandidateId(null);
     }, []);
 
+    const exportToCSV = useCallback((data: Candidate[]) => {
+        const headers = ['Candidate ID', 'Name', 'Email', 'Phone', 'Field', 'Experience', 'Status', 'Availability', 'Salary Range'];
+        const csvRows = data.map(c => [
+            `"${generateCandidateId(c.id, c.created_at || new Date().toISOString())}"`,
+            `"${c.name}"`,
+            `"${c.email}"`,
+            `"${c.phone}"`,
+            `"${c.field}"`,
+            `"${c.experience}"`,
+            `"${c.status}"`,
+            `"${c.availability}"`,
+            `"${c.salary_range}"`
+        ]);
+        
+        const csvContent = [
+            headers.join(','),
+            ...csvRows.map(row => row.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `candidates_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, []);
+
+    const exportToPDF = useCallback(async (data: Candidate[]) => {
+        try {
+            const { default: jsPDF } = await import('jspdf');
+            const { default: autoTable } = await import('jspdf-autotable');
+
+            const doc = new jsPDF('landscape', 'mm', 'a4');
+            
+            doc.setFontSize(22);
+            doc.setTextColor(59, 130, 246);
+            doc.text('Candidates Report', 14, 22);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32);
+            doc.text(`Total Candidates: ${data.length}`, 14, 40);
+            
+            doc.setDrawColor(200, 200, 200);
+            doc.line(14, 44, 290, 44);
+
+            const tableData = data.map(c => [
+                generateCandidateId(c.id, c.created_at || new Date().toISOString()),
+                c.name || 'N/A',
+                c.email || 'N/A',
+                c.phone || 'N/A',
+                c.field || 'N/A',
+                c.experience || 'N/A',
+                c.status || 'N/A',
+                c.availability || 'N/A',
+                c.salary_range || 'N/A'
+            ]);
+
+            autoTable(doc, {
+                head: [['Candidate ID', 'Name', 'Email', 'Phone', 'Field', 'Experience', 'Status', 'Availability', 'Salary Range']],
+                body: tableData,
+                startY: 50,
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 3,
+                    lineColor: [200, 200, 200],
+                    lineWidth: 0.5,
+                },
+                headStyles: {
+                    fillColor: [59, 130, 246],
+                    textColor: [255, 255, 255],
+                    fontSize: 10,
+                    fontStyle: 'bold',
+                    halign: 'center',
+                    cellPadding: 4,
+                },
+                alternateRowStyles: {
+                    fillColor: [243, 244, 246],
+                },
+                columnStyles: {
+                    0: { cellWidth: 32, halign: 'center' },  // Candidate ID - increased
+                    1: { cellWidth: 32, halign: 'left' },    // Name - increased
+                    2: { cellWidth: 42, halign: 'left' },    // Email - increased
+                    3: { cellWidth: 26, halign: 'left' },    // Phone - increased
+                    4: { cellWidth: 28, halign: 'left' },    // Field - increased
+                    5: { cellWidth: 28, halign: 'center' },  // Experience - increased
+                    6: { cellWidth: 25, halign: 'center' },  // Status - increased
+                    7: { cellWidth: 28, halign: 'center' },  // Availability - increased
+                    8: { cellWidth: 34, halign: 'left' },    // Salary Range - increased
+                },
+                margin: { left: 10, right: 10 }, 
+                tableWidth: 'auto',
+                showHead: 'everyPage',
+                didParseCell: function(data) {
+                   
+                    // Style Candidate ID with blue color
+                    if (data.section === 'body' && data.column.index === 0) {
+                        data.cell.styles.textColor = [37, 99, 235];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            });
+
+            const pageCount = doc.internal.pages.length - 1;
+            
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(9);
+                doc.setTextColor(150, 150, 150);
+                doc.text(
+                    `Page ${i} of ${pageCount}`,
+                    doc.internal.pageSize.width - 30,
+                    doc.internal.pageSize.height - 10
+                );
+                doc.text(
+                    `Candidates Report - ${new Date().toLocaleDateString()}`,
+                    14,
+                    doc.internal.pageSize.height - 10
+                );
+            }
+
+            doc.save(`candidates_export_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (error) {
+            console.error('PDF export error:', error);
+            toast.error('Failed to export PDF. Please make sure jspdf and jspdf-autotable are installed.');
+            throw error;
+        }
+    }, []);
+
+    const handleExport = useCallback(async (format: 'csv' | 'pdf') => {
+        if (isExporting) return;
+        
+        setIsExporting(true);
+        setShowExportOptions(false);
+        
+        try {
+            const dataToExport = filteredCandidates.length > 0 ? filteredCandidates : candidates;
+            
+            if (dataToExport.length === 0) {
+                toast.error('No candidates to export');
+                return;
+            }
+
+            if (format === 'csv') {
+                exportToCSV(dataToExport);
+                toast.success(`Exported ${dataToExport.length} candidates as CSV`);
+            } else if (format === 'pdf') {
+                await exportToPDF(dataToExport);
+                toast.success(`Exported ${dataToExport.length} candidates as PDF`);
+            }
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Failed to export candidates');
+        } finally {
+            setIsExporting(false);
+        }
+    }, [filteredCandidates, candidates, isExporting, exportToCSV, exportToPDF]);
+
+    const toggleExportOptions = useCallback(() => {
+        setShowExportOptions(!showExportOptions);
+    }, [showExportOptions]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showExportOptions) {
+                const target = event.target as HTMLElement;
+                if (!target.closest('.export-dropdown')) {
+                    setShowExportOptions(false);
+                }
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showExportOptions]);
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -122,12 +305,55 @@ export default function CandidatesPage() {
                         <p className="text-sm text-gray-500">Dashboard / Candidates</p>
                     </div>
                     <div className="flex gap-3 w-full sm:w-auto">
-                        <button className="flex-1 sm:flex-none px-4 py-2 bg-white border rounded-lg text-sm font-medium hover:bg-gray-50">
-                            Export
-                        </button>
+                        {/* Export Button with Dropdown */}
+                        <div className="relative flex-1 sm:flex-none export-dropdown">
+                            <button 
+                                onClick={toggleExportOptions}
+                                disabled={isExporting}
+                                className="w-full px-4 py-2 bg-white border rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Download size={16} />
+                                {isExporting ? 'Exporting...' : 'Export'}
+                            </button>
+                            
+                           {/* Export Options Dropdown */}
+                            {showExportOptions && !isExporting && (
+                                <div className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                                  <button
+                                   onClick={() => handleExport('csv')}
+                                   className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors flex items-center gap-3"
+                                  >
+                                   <img 
+                                  src="https://img.icons8.com/color/48/000000/csv.png" 
+                                  alt="CSV" 
+                                  className="w-6 h-6 object-contain"
+                                  onError={(e) => {
+                                 e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2343A047" stroke-width="2"%3E%3Crect x="2" y="2" width="20" height="20" rx="2"/%3E%3Cpath d="M7 7h10M7 11h10M7 15h6"/%3E%3C/svg%3E';
+                                    }}
+                                    />
+                                    <span>Export as CSV</span>
+                                  </button>
+                                  <button
+                                     onClick={() => handleExport('pdf')}
+                                     className="w-full px-4 py-2.5 text-left text-sm hover:bg-gray-50 transition-colors flex items-center gap-3"
+                                   >
+                                   <img 
+                                      src="https://cdn-icons-png.flaticon.com/512/337/337946.png" 
+                                      alt="PDF" 
+                                      className="w-6 h-6 object-contain"
+                                      onError={(e) => {
+                                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23E53935" stroke-width="2"%3E%3Crect x="2" y="2" width="20" height="20" rx="2"/%3E%3Cpath d="M7 7h10M7 11h10M7 15h6"/%3E%3C/svg%3E';
+                                    }}
+                                    />
+                                    <span>Export as PDF</span>
+                                  </button>
+                                </div>
+                            )}
+                        </div>
+                        
                         <button 
                             onClick={handleAddCandidate}
-                            className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700"
+                            className="flex-1 sm:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
                         >
                             <Plus size={16} /> <span className="hidden sm:inline">Add Candidate</span>
                             <span className="sm:hidden">Add</span>
@@ -190,7 +416,7 @@ export default function CandidatesPage() {
                             
                             <button 
                                 onClick={handleApplyFilters}
-                                className="bg-blue-600 text-white px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 col-span-2 sm:col-span-1"
+                                className="bg-blue-600 text-white px-4 sm:px-5 py-2 rounded-xl text-sm font-semibold hover:bg-blue-700 col-span-2 sm:col-span-1 transition-colors"
                             >
                                 Apply
                             </button>
