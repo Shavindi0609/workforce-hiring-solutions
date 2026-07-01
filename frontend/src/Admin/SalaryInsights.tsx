@@ -40,20 +40,50 @@ export default function SalaryInsights() {
     loading 
   } = useSalaryInsights();
 
-  // Transform salary distribution for chart
+  const filteredData = useMemo(() => {
+    let filtered = {
+      salaryDistribution,
+      salaryOverview,
+      salaryRangeDistribution,
+      salaryByExperience
+    };
+
+    if (appliedFilters.field !== "All Fields") {
+      filtered.salaryDistribution = filtered.salaryDistribution.filter(
+        item => item.field === appliedFilters.field
+      );
+    }
+
+    if (appliedFilters.experience !== "All Experience") {
+      filtered.salaryByExperience = filtered.salaryByExperience.filter(
+        item => item.experience_level === appliedFilters.experience
+      );
+    }
+
+    // Filter by date range (if your data has date fields)
+    if (appliedFilters.fromDate && appliedFilters.toDate) {
+      // Add date filtering logic based on your data structure
+      // Example: filtered.salaryDistribution = filtered.salaryDistribution.filter(
+      //   item => item.date >= appliedFilters.fromDate && item.date <= appliedFilters.toDate
+      // );
+    }
+
+    return filtered;
+  }, [salaryDistribution, salaryOverview, salaryRangeDistribution, salaryByExperience, appliedFilters]);
+
   const salaryDistributionFields = useMemo(() => {
-    return salaryDistribution.map(item => ({
+    return filteredData.salaryDistribution.map(item => ({
       field: item.field.substring(0, 15),
       minSalary: item.min_salary,
       maxSalary: item.max_salary,
       count: item.candidate_count
     }));
-  }, [salaryDistribution]);
+  }, [filteredData.salaryDistribution]);
 
   const maxSalary = Math.max(...salaryDistributionFields.map(d => d.maxSalary), 1);
 
-  const hasActiveFilters = draftFilters.field !== "All Fields" || 
-                          draftFilters.experience !== "All Experience";
+  const hasActiveFilters = appliedFilters.field !== "All Fields" || 
+                          appliedFilters.experience !== "All Experience";
 
   const clearAllFilters = () => {
     setDraftFilters(initialFilters);
@@ -73,7 +103,7 @@ export default function SalaryInsights() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-      {/* Header Section - Responsive */}
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Salary Insights</h1>
@@ -81,7 +111,7 @@ export default function SalaryInsights() {
         </div>
       </div>
 
-      {/* Search and Filters Section - Responsive */}
+      {/* Search and Filters Section */}
       <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 mb-6">
         <div className="flex flex-col gap-3 sm:gap-4">
           {/* First row: Field and Experience filters */}
@@ -163,9 +193,9 @@ export default function SalaryInsights() {
         </div>
       </div>
 
-      {/* Salary Distribution and Overview - Responsive Grid */}
+      {/* Salary Distribution and Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        {/* Salary Distribution Section - Takes full width on mobile, 2 columns on desktop */}
+        {/* Salary Distribution Section */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
             <h2 className="text-lg font-semibold text-gray-900">Salary Distribution by Field</h2>
@@ -194,39 +224,44 @@ export default function SalaryInsights() {
                   </div>
                 );
               })}
+              {salaryDistributionFields.length === 0 && (
+                <div className="w-full text-center text-gray-500 py-8">
+                  No data available for the selected filters
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Overview Section - Full width on mobile, 1 column on desktop */}
+        {/* Overview Section */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Overview</h2>
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-4">
             <div className="border-b border-gray-100 pb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Avg. Min Salary</p>
-              <p className="text-lg sm:text-xl font-bold text-gray-900">Rs.{salaryOverview.avg_min_salary.toLocaleString()}</p>
-              <p className="text-xs text-gray-400 mt-1">per year</p>
+              <p className="text-lg sm:text-xl font-bold text-gray-900">Rs.{filteredData.salaryOverview.avg_min_salary.toLocaleString()}</p>
+              <p className="text-xs text-gray-400 mt-1">per month</p>
             </div>
             <div className="border-b border-gray-100 pb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Avg. Max Salary</p>
-              <p className="text-lg sm:text-xl font-bold text-green-600">Rs.{salaryOverview.avg_max_salary.toLocaleString()}</p>
-              <p className="text-xs text-gray-400 mt-1">per year</p>
+              <p className="text-lg sm:text-xl font-bold text-green-600">Rs.{filteredData.salaryOverview.avg_max_salary.toLocaleString()}</p>
+              <p className="text-xs text-gray-400 mt-1">per month</p>
             </div>
             <div className="border-b border-gray-100 pb-3">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Highest Salary Range</p>
-              <p className="text-lg sm:text-xl font-bold text-purple-600">{salaryOverview.highest_range}</p>
-              <p className="text-xs text-gray-400 mt-1">per year</p>
+              <p className="text-lg sm:text-xl font-bold text-purple-600">{filteredData.salaryOverview.highest_range}</p>
+              <p className="text-xs text-gray-400 mt-1">per month</p>
             </div>
             <div className="pb-2">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total Candidates</p>
-              <p className="text-lg sm:text-xl font-bold text-orange-600">{salaryOverview.total_candidates.toLocaleString()}</p>
+              <p className="text-lg sm:text-xl font-bold text-orange-600">{filteredData.salaryOverview.total_candidates.toLocaleString()}</p>
               <p className="text-xs text-gray-400 mt-1">across all ranges</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Candidates by Salary Range and Salary Range by Experience - Responsive */}
+      {/* Candidates by Salary Range and Salary Range by Experience */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Candidates by Salary Range - Donut Chart */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-6">
@@ -237,8 +272,8 @@ export default function SalaryInsights() {
                 <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
                   {(() => {
                     let currentAngle = 0;
-                    const total = salaryRangeDistribution.reduce((sum, d) => sum + d.candidate_count, 0);
-                    return salaryRangeDistribution.map((item, idx) => {
+                    const total = filteredData.salaryRangeDistribution.reduce((sum, d) => sum + d.candidate_count, 0);
+                    return filteredData.salaryRangeDistribution.map((item, idx) => {
                       const angle = (item.candidate_count / total) * 360;
                       const startAngle = currentAngle;
                       const endAngle = currentAngle + angle;
@@ -269,7 +304,7 @@ export default function SalaryInsights() {
               </div>
             </div>
             <div className="grid grid-cols-1 gap-1 w-full sm:w-auto">
-              {salaryRangeDistribution.map((item, idx) => (
+              {filteredData.salaryRangeDistribution.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: colors[idx % colors.length] }} />
@@ -281,6 +316,11 @@ export default function SalaryInsights() {
                   </div>
                 </div>
               ))}
+              {filteredData.salaryRangeDistribution.length === 0 && (
+                <div className="text-center text-gray-500 py-4">
+                  No data available for the selected filters
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -300,17 +340,17 @@ export default function SalaryInsights() {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {salaryByExperience.map((item, index) => (
+                {filteredData.salaryByExperience.map((item, index) => (
                   <tr key={index} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                     <td className="p-3 sm:p-4 font-medium text-gray-900">{item.experience_level}</td>
                     <td className="p-3 sm:p-4 text-center text-green-600 font-medium">Rs.{item.avg_min_salary.toLocaleString()}</td>
                     <td className="p-3 sm:p-4 text-center text-blue-600 font-medium">Rs.{item.avg_max_salary.toLocaleString()}</td>
                   </tr>
                 ))}
-                {salaryByExperience.length === 0 && (
+                {filteredData.salaryByExperience.length === 0 && (
                   <tr>
                     <td colSpan={3} className="p-8 text-center text-gray-500">
-                      No experience data available
+                      No data available for the selected filters
                     </td>
                   </tr>
                 )}
@@ -318,9 +358,9 @@ export default function SalaryInsights() {
             </table>
           </div>
           
-          {/* Pagination Footer - Responsive */}
+          {/* Pagination Footer */}
           <div className="px-4 sm:px-6 py-3 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 bg-gray-50">
-            <p className="text-xs sm:text-sm">Showing {salaryByExperience.length} of {salaryByExperience.length}</p>
+            <p className="text-xs sm:text-sm">Showing {filteredData.salaryByExperience.length} of {filteredData.salaryByExperience.length}</p>
             <div className="flex gap-2">
               <button className="px-3 py-1 border border-gray-200 rounded-md hover:bg-white transition-colors disabled:opacity-50 text-xs sm:text-sm" disabled>Previous</button>
               <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs sm:text-sm">1</button>
