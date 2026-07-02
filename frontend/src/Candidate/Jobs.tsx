@@ -14,12 +14,49 @@ export default function CandidateJobs() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedJobTitle, setSelectedJobTitle] = useState('');
+  const [fields, setFields] = useState<string[]>(['All']); // Initialize with 'All'
+  const [loadingFields, setLoadingFields] = useState(true);
 
-  const fields = ['All', 'Software Development', 'Data Science', 'UI/UX Design', 'Marketing', 'Sales', 'HR'];
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid Date';
+    }
+    
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    
+    const now = new Date();
+    
+    const dateMidnight = new Date(date);
+    dateMidnight.setHours(0, 0, 0, 0);
+    
+    const nowMidnight = new Date(now);
+    nowMidnight.setHours(0, 0, 0, 0);
+    
+    const diffTime = nowMidnight.getTime() - dateMidnight.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+    return `${Math.floor(diffDays / 365)} years ago`;
+  };
 
   useEffect(() => {
     loadCandidateProfile();
     loadAppliedJobs();
+    loadFields();
   }, []);
 
   useEffect(() => {
@@ -30,10 +67,9 @@ export default function CandidateJobs() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Select only columns that exist in your table
         const { data, error } = await supabase
           .from('candidates')
-          .select('interested_field, name, email') // Removed experience_level if it doesn't exist
+          .select('interested_field, name, email')
           .eq('id', user.id)
           .maybeSingle();
       
@@ -68,6 +104,30 @@ export default function CandidateJobs() {
     }
   };
 
+  const loadFields = async () => {
+    try {
+      setLoadingFields(true);
+      const { data, error } = await supabase
+        .from('fields')
+        .select('name')
+        .eq('status', 'Active')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Error loading fields:', error);
+        setFields(['All', 'Software Development', 'Data Science', 'UI/UX Design', 'Marketing', 'Sales', 'HR']);
+      } else if (data) {
+        const fieldNames = data.map(field => field.name);
+        setFields(['All', ...fieldNames]);
+      }
+    } catch (error) {
+      console.error('Error in loadFields:', error);
+      setFields(['All', 'Software Development', 'Data Science', 'UI/UX Design', 'Marketing', 'Sales', 'HR']);
+    } finally {
+      setLoadingFields(false);
+    }
+  };
+
   const handleApplyClick = (jobId: string, jobTitle: string) => {
     if (appliedJobs.has(jobId)) {
       toast.error('You have already applied for this job');
@@ -92,7 +152,6 @@ export default function CandidateJobs() {
       return;
     }
 
-    // Check if candidate profile exists
     if (!candidateProfile) {
       toast.error('Please complete your profile before applying');
       setApplyingForJob(null);
@@ -124,7 +183,7 @@ export default function CandidateJobs() {
     setSelectedJobId(null);
   };
 
-  if (loading) {
+  if (loading || loadingFields) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -160,13 +219,16 @@ export default function CandidateJobs() {
         <div className="flex items-center gap-2 mb-3">
           <Filter size={18} className="text-gray-500" />
           <span className="text-sm font-medium">Filter by Field</span>
+          {!loadingFields && (
+            <span className="text-xs text-gray-400 ml-2">({fields.length - 1} fields available)</span>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {fields.map(field => (
             <button
               key={field}
               onClick={() => setSelectedField(field)}
-              className={`px-3 py-1.5 rounded-lg text-sm transition ${
+              className={`px-3 py-1.5 rounded-lg text-sm transition whitespace-nowrap ${
                 selectedField === field
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -254,7 +316,7 @@ export default function CandidateJobs() {
                 </div>
                 {job.salary_range && (
                   <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <DollarSign size={16} />
+                    <span className="font-medium">LKR</span>
                     <span>{job.salary_range}</span>
                   </div>
                 )}
@@ -270,9 +332,14 @@ export default function CandidateJobs() {
               )}
 
               <div className="flex items-center justify-between pt-4 border-t">
-                <span className="text-xs text-gray-500">
-                  Posted: {new Date(job.created_at).toLocaleDateString()}
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-500">
+                    Posted: {formatDate(job.created_at)}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {getRelativeTime(job.created_at)}
+                  </span>
+                </div>
                 <button
                   onClick={() => handleApplyClick(job.id, job.title)}
                   disabled={isApplied || isApplying}

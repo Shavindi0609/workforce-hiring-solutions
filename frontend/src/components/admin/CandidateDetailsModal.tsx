@@ -1,6 +1,8 @@
+// In CandidateDetailsModal.tsx, add this function and display the ID
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
-import { X, Download, Eye, FileText, Mail, Phone, Calendar, Briefcase, Clock, DollarSign, MapPin } from 'lucide-react';
+import { X, Download, Eye, FileText, Mail, Phone, Calendar, Briefcase, Clock, DollarSign, MapPin, Copy } from 'lucide-react';
 
 interface CandidateDetailsModalProps {
     candidateId: string;
@@ -27,10 +29,18 @@ interface CandidateFullDetails {
     created_at: string;
 }
 
+// Add this helper function to generate candidate ID
+function generateCandidateId(id: string, createdAt: string): string {
+    const year = new Date(createdAt).getFullYear();
+    const shortId = id.replace(/-/g, "").slice(0, 4).toUpperCase();
+    return `WHS-${year}-${shortId}`;
+}
+
 export default function CandidateDetailsModal({ candidateId, onClose }: CandidateDetailsModalProps) {
     const [candidate, setCandidate] = useState<CandidateFullDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         fetchCandidateDetails();
@@ -64,7 +74,6 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
 
     const handleDownloadCV = () => {
         if (candidate?.cv_url) {
-            // Create a temporary link to download the file
             const link = document.createElement('a');
             link.href = candidate.cv_url;
             link.download = candidate.cv_filename || 'cv.pdf';
@@ -76,10 +85,19 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
         }
     };
 
+    const handleCopyId = () => {
+        if (candidate) {
+            const candidateId = generateCandidateId(candidate.id, candidate.created_at);
+            navigator.clipboard.writeText(candidateId);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
             <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-                {/* Header - Sticky with responsive padding */}
+                {/* Header */}
                 <div className="sticky top-0 bg-white border-b px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                     <h2 className="text-lg sm:text-xl font-bold text-gray-900">Candidate Details</h2>
                     <button
@@ -101,7 +119,26 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
                     </div>
                 ) : candidate ? (
                     <div className="p-4 sm:p-6">
-                        {/* Profile Header - Responsive */}
+                        {/* Candidate ID Banner - NEW */}
+                        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 sm:p-5">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Candidate ID</p>
+                                    <p className="text-xl sm:text-2xl font-bold text-blue-700 font-mono mt-1">
+                                        {generateCandidateId(candidate.id, candidate.created_at)}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleCopyId}
+                                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition text-sm font-medium"
+                                >
+                                    <Copy size={16} />
+                                    {copied ? 'Copied!' : 'Copy ID'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Profile Header */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                             <div className="w-full sm:w-auto">
                                 <h3 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{candidate.name}</h3>
@@ -129,7 +166,7 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
                             </div>
                         </div>
 
-                        {/* Two Column Grid - Single column on mobile */}
+                        {/* Rest of your existing code... */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Personal Information */}
                             <div className="space-y-4">
@@ -207,7 +244,7 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
                             </div>
                         </div>
 
-                        {/* Skills - Responsive */}
+                        {/* Skills */}
                         <div className="mt-6">
                             <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Skills</h4>
                             <div className="flex flex-wrap gap-2">
@@ -223,7 +260,7 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
                             </div>
                         </div>
 
-                        {/* CV Section - Responsive */}
+                        {/* CV Section */}
                         {candidate.cv_url && (
                             <div className="mt-6 p-3 sm:p-4 bg-gray-50 rounded-xl border">
                                 <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">CV / Resume</h4>
