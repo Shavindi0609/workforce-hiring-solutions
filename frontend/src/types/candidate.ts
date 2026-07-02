@@ -16,7 +16,7 @@ export interface CandidateFormData {
   salaryRange?: string;
   cv?: File | null;
 }
-// src/types/candidate.ts - TOP හි add කරන්න
+// src/types/candidate.ts - TOP add 
 export interface BasicInfoData {
   fullName: string;
   email: string;
@@ -74,6 +74,7 @@ export interface Candidate {
     skills?: string[];
     willing_to_contact?: boolean;
     cv_url?: string;
+    cv_text?: string;
 }
 
 export interface CreateCandidateDto {

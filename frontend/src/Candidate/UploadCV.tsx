@@ -5,6 +5,7 @@ import { BsCloudArrowUp } from 'react-icons/bs';
 import { supabase } from '../supabaseClient';
 import type { FormComponentProps } from '../types/candidate'; 
 import { saveCandidate } from '../Candidate/candidateService';
+import { extractTextFromFile } from '../utils/extractCvText';
 
 export default function UploadCV({
   formData,
@@ -16,8 +17,9 @@ export default function UploadCV({
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [agreeToContact, setAgreeToContact] = useState(false);
-   const [loading, setLoading] = useState(false);  
+  const [loading, setLoading] = useState(false);  
   const fileInputRef = useRef<HTMLInputElement>(null);
+   const isSubmittingRef = useRef(false);
 
   const handleDrag = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -75,24 +77,75 @@ export default function UploadCV({
   //     alert('Please agree to be contacted');
   //   }
   // };
+
+
+
+// const handleSubmit = async (e: FormEvent) => {
+//   e.preventDefault();
+//   console.log('🟡 handleSubmit called at', Date.now());
+//   console.trace('Call stack:'); 
+
+//   if (loading) return; 
+
+//   if (!selectedFile) {
+//     alert('Please upload your CV');
+//     return;
+//   }
+//   if (!agreeToContact) {
+//     alert('Please agree to be contacted');
+//     return;
+//   }
+
+//   try {
+//     setLoading(true); 
+
+//     const { data: { user }, error: authError } = await supabase.auth.getUser();
+//     if (authError || !user) throw new Error('Not authenticated');
+
+//     const cvText = await extractTextFromFile(selectedFile);
+
+//     await saveCandidate(
+//       {
+//         basicData: basicData!,
+//         professionalData: {
+//           interestedField: formData.interestedField,
+//           yearsOfExperience: formData.yearsOfExperience,
+//         },
+//         formData,
+//         cvFile: selectedFile,
+//         cvText,
+//       },
+//       user.id
+//     );
+
+//     onNext(); // Dashboard redirect
+//   } catch (error: any) {
+//     console.error(error);
+//     alert(`Submission failed: ${error.message}`);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
 const handleSubmit = async (e: FormEvent) => {
   e.preventDefault();
-
+  if (isSubmittingRef.current) return;
+  isSubmittingRef.current = true;
   if (!selectedFile) {
     alert('Please upload your CV');
+    isSubmittingRef.current = false;
     return;
   }
   if (!agreeToContact) {
     alert('Please agree to be contacted');
+    isSubmittingRef.current = false;
     return;
   }
-
   try {
     setLoading(true); 
-
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) throw new Error('Not authenticated');
-
+    const cvText = await extractTextFromFile(selectedFile);
     await saveCandidate(
       {
         basicData: basicData!,
@@ -102,18 +155,20 @@ const handleSubmit = async (e: FormEvent) => {
         },
         formData,
         cvFile: selectedFile,
+        cvText,
       },
       user.id
     );
-
-    onNext(); // Dashboard redirect
+    onNext();
   } catch (error: any) {
     console.error(error);
     alert(`Submission failed: ${error.message}`);
   } finally {
     setLoading(false);
+    isSubmittingRef.current = false;
   }
 };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4 font-sans">
       
@@ -278,10 +333,15 @@ const handleSubmit = async (e: FormEvent) => {
             </button>
             <button
               type="submit"
-              className="bg-lime-600 hover:bg-lime-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm tracking-wide group focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2"
+              disabled={loading}   // 👈 add කරන්න
+              className="bg-lime-600 hover:bg-lime-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 text-sm tracking-wide group focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Join Talent Pool
-              <Check className="w-5 h-5 transition-transform group-hover:scale-110" strokeWidth={3} />
+              {loading ? 'Submitting...' : (
+                <>
+                  Join Talent Pool
+                  <Check className="w-5 h-5 transition-transform group-hover:scale-110" strokeWidth={3} />
+                </>
+              )}
             </button>
           </div>
         </form>

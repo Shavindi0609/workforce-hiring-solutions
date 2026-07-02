@@ -29,6 +29,8 @@ export default function CandidatesPage() {
         getStatistics 
     } = useCandidates();
 
+    const [cvKeywords, setCvKeywords] = useState('');
+
     const { fields, fetchFields } = useFields();
     
     // Fetch fields when component mounts
@@ -44,8 +46,23 @@ export default function CandidatesPage() {
     const uniqueAvailability = useMemo(() => ['All', ...new Set(candidates.map(c => c.availability))],[candidates]);
 
     // Apply filters
+    // const filteredCandidates = useMemo(() => {
+    //     return candidates.filter(candidate => {
+    //         const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //                              candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //                              candidate.field.toLowerCase().includes(searchTerm.toLowerCase());
+    //         const matchesField = fieldFilter === 'All Fields' || candidate.field === fieldFilter;
+    //         const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
+    //         const matchesAvailability = availabilityFilter === 'All' || candidate.availability === availabilityFilter;
+    //         return matchesSearch && matchesField && matchesStatus && matchesAvailability;
+    //     });
+    // }, [candidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
+
     const filteredCandidates = useMemo(() => {
-        return candidates.filter(candidate => {
+    const isKeywordSearchActive = cvKeywords.trim().length > 0;
+
+    const withMatch = candidates
+        .filter(candidate => {
             const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                  candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                  candidate.field.toLowerCase().includes(searchTerm.toLowerCase());
@@ -53,8 +70,22 @@ export default function CandidatesPage() {
             const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
             const matchesAvailability = availabilityFilter === 'All' || candidate.availability === availabilityFilter;
             return matchesSearch && matchesField && matchesStatus && matchesAvailability;
-        });
-    }, [candidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
+        })
+        .map(candidate => ({
+            ...candidate,
+            matchPercentage: calculateMatchPercentage(candidate, cvKeywords),
+        }));
+
+    const result = isKeywordSearchActive
+        ? withMatch.filter(c => c.matchPercentage > 0)
+        : withMatch;
+
+    if (isKeywordSearchActive) {
+        result.sort((a, b) => b.matchPercentage - a.matchPercentage);
+    }
+
+    return result;
+}, [candidates, searchTerm, fieldFilter, statusFilter, availabilityFilter, cvKeywords]);
 
     const handleAddCandidate = useCallback(() => {
         setSelectedCandidate(null);
@@ -112,6 +143,31 @@ export default function CandidatesPage() {
         );
     }
 
+    function calculateMatchPercentage(candidate: Candidate, keywordString: string): number {
+        const keywords = keywordString
+            .split(/[,\s]+/)
+            .map(k => k.trim().toLowerCase())
+            .filter(Boolean);
+
+        if (keywords.length === 0) return -1; // keyword search not active
+
+        const searchableParts: string[] = [
+            candidate.name,
+            candidate.field,
+            candidate.experience,
+            candidate.status,
+            candidate.availability,
+            candidate.cv_text ?? '', 
+            ...(candidate.skills ?? []),
+        ];
+
+
+        const searchableText = searchableParts.join(' ').toLowerCase();
+
+        const matchedCount = keywords.filter(kw => searchableText.includes(kw)).length;
+        return Math.round((matchedCount / keywords.length) * 100);
+    }
+
     return (
         <>
             <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -146,6 +202,7 @@ export default function CandidatesPage() {
                 {/* Search and Filters - Responsive */}
                 <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 mb-6">
                     <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 sm:gap-4">
+
                         <div className="relative flex-grow">
                             <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                             <input 
@@ -157,6 +214,21 @@ export default function CandidatesPage() {
                             />
                         </div>
                         
+                    <div className="relative flex-grow">
+                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="CV keyword search (e.g. react, node, aws)..." 
+                            className="w-full pl-10 pr-4 py-2 border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={cvKeywords}
+                            onChange={(e) => setCvKeywords(e.target.value)}
+                        />
+                        {cvKeywords && (
+                            <p className="text-xs text-gray-400 mt-1 ml-1">
+                                Matching against name, field, experience, skills
+                            </p>
+                        )}
+                    </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-1 gap-2 sm:gap-3">
                             <select
                                 value={fieldFilter}
@@ -211,6 +283,9 @@ export default function CandidatesPage() {
                                     <th className="p-3 sm:p-4 hidden sm:table-cell">Field</th>
                                     <th className="p-3 sm:p-4 hidden md:table-cell">Experience</th>
                                     <th className="p-3 sm:p-4">Status</th>
+                                    {cvKeywords.trim() && (
+                                        <th className="p-3 sm:p-4">Match</th>
+                                    )}
                                     <th className="p-3 sm:p-4 hidden lg:table-cell">Availability</th>
                                     <th className="p-3 sm:p-4 hidden xl:table-cell">Salary</th>
                                     <th className="p-3 sm:p-4 text-center">Actions</th>
@@ -243,6 +318,17 @@ export default function CandidatesPage() {
                                                 {candidate.status === 'Actively Looking' ? 'Active' : 'Open'}
                                             </span>
                                         </td>
+                                        {cvKeywords.trim() && (
+                                        <td className="p-3 sm:p-4">
+                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                                candidate.matchPercentage >= 70 ? 'bg-green-100 text-green-700' :
+                                                candidate.matchPercentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                                                'bg-gray-100 text-gray-600'
+                                            }`}>
+                                                {candidate.matchPercentage}%
+                                            </span>
+                                        </td>
+                                    )}
                                         <td className="p-3 sm:p-4 hidden lg:table-cell">{candidate.availability}</td>
                                         <td className="p-3 sm:p-4 hidden xl:table-cell">{candidate.salary_range}</td>
                                         <td className="p-3 sm:p-4">
