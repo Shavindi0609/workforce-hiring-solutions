@@ -63,6 +63,7 @@ export const useCandidates = () => {
                 skills: c.skills,
                 willing_to_contact: c.willing_to_contact,
                 cv_url: c.cv_url,
+                cv_text: c.cv_text,
             })) || [];
             
             setCandidates(mappedCandidates);

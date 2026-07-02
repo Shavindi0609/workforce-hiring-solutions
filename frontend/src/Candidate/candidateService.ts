@@ -7,6 +7,7 @@ export interface FullCandidateData {
   professionalData: ProfessionalInfoData;
   formData: CandidateFormData;
   cvFile: File;
+  cvText?: string; 
 }
 
 // CV upload — 
@@ -34,7 +35,8 @@ export async function saveCandidate(
   data: FullCandidateData,
   userId: string
 ): Promise<void> {
-  const { basicData, professionalData, formData, cvFile } = data;
+  const { basicData, professionalData, formData, cvFile, cvText } = data;
+  console.log('📝 cvText received:', cvText?.substring(0, 200));
 
   // 1. Upload CV
   const cvUrl = await uploadCV(cvFile, userId);
@@ -63,9 +65,14 @@ export async function saveCandidate(
 
       cv_url: cvUrl,
       cv_filename: cvFile.name,
+    ...(cvText ? { cv_text: cvText } : {}),  
     });
 
-  if (error) throw new Error(`Profile save failed: ${error.message}`);
+  // if (error) throw new Error(`Profile save failed: ${error.message}`);
+   if (error) {
+    console.error('❌ Upsert error:', error);   // 👈 DEBUG LINE
+    throw new Error(`Profile save failed: ${error.message}`);
+  }
 }
 
 // Fetch candidate profile (dashboard use)
