@@ -1,4 +1,3 @@
-// src/Admin/Reports.tsx
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   BriefcaseBusiness,
@@ -51,7 +50,6 @@ function Reports() {
     refetch 
   } = useReports();
 
-  // Prevent date validation from causing re-renders
   useEffect(() => {
     if (fromDate && toDate && toDate < fromDate) {
       setToDate(fromDate);
@@ -78,7 +76,6 @@ function Reports() {
     };
     
     try {
-      // Log report generation activity
       await logReportGenerated(reportName, format);
       
       await generateReportData(reportName, format, filters);
@@ -105,7 +102,6 @@ function Reports() {
     };
     
     try {
-      // Log report generation activity
       await logReportGenerated(selectedReportName, 'PDF');
       
       await generateReportData(selectedReportName, 'PDF', filters);
@@ -117,16 +113,12 @@ function Reports() {
     }
   }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, refetch, isGenerating]);
 
-  // Handle download from recent reports
   const handleRecentReportDownload = useCallback(async (reportName: string, format: 'PDF' | 'Excel') => {
     if (isGenerating) return;
     
     setIsGenerating(true);
     try {
-      // Log export data activity
       await logExportData(`${reportName} (${format})`, 1);
-      
-      // Find the report in generatedReports to get its data
       const report = generatedReports.find(r => r.name === reportName && r.type === format);
       if (report) {
         downloadReport(reportName, format);
@@ -140,7 +132,6 @@ function Reports() {
     }
   }, [generatedReports, downloadReport, isGenerating]);
 
-  // Prepare summary metrics for display
   const summaryMetricsList = [
     { label: 'Total Candidates', value: summaryMetrics.totalCandidates.toLocaleString(), tone: 'blue' },
     { label: 'Actively Looking', value: summaryMetrics.activelyLooking.toLocaleString(), tone: 'green' },

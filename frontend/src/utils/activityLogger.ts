@@ -1,4 +1,3 @@
-// utils/activityLogger.ts
 import { supabase } from '../supabaseClient';
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -78,13 +77,12 @@ export class ActivityLogger {
       return;
     }
 
-    // Deduplicate page views - prevent logging the same page within 5 seconds
     if (data.activity_type === 'page_view') {
       const currentPage = data.page_url || window.location.pathname;
       const now = Date.now();
       
       if (this.lastLoggedPage === currentPage && (now - this.lastLoggedTime) < 5000) {
-        console.log('⏭️ Skipping duplicate page view:', currentPage);
+        console.log('Skipping duplicate page view:', currentPage);
         return;
       }
       
@@ -98,7 +96,7 @@ export class ActivityLogger {
       page_name: data.page_name || document.title || 'Unknown Page',
     });
 
-    console.log(`📝 Logging activity: ${data.activity_type} - ${data.activity_description}`);
+    console.log(`Logging activity: ${data.activity_type} - ${data.activity_description}`);
 
     if (this.queue.length >= 5) {
       await this.processBatch();
@@ -153,7 +151,7 @@ export class ActivityLogger {
           console.error('Error logging activities:', error);
           this.saveToLocalStorage(logs);
         } else {
-          console.log(`✅ Logged ${logs.length} activities`);
+          console.log(`Logged ${logs.length} activities`);
         }
       }
     } catch (error) {
@@ -206,7 +204,6 @@ export class ActivityLogger {
   }
 }
 
-// Hook for easy use in components
 export const useActivityLogger = () => {
   const location = useLocation();
   const logger = ActivityLogger.getInstance();
@@ -254,7 +251,6 @@ export const useActivityLogger = () => {
   }, [location.pathname]);
 };
 
-// Helper functions for all activity types
 export const logActivity = async (
   type: ActivityType,
   description: string,
@@ -268,11 +264,6 @@ export const logActivity = async (
   });
 };
 
-// ============================================
-// SPECIFIC ACTIVITY LOGGING HELPERS
-// ============================================
-
-// Authentication
 export const logLogin = async (email: string) => {
   await logActivity('login', `User ${email} logged in`, { user_email: email });
 };
@@ -281,12 +272,10 @@ export const logLogout = async (email: string) => {
   await logActivity('logout', `User ${email} logged out`, { user_email: email });
 };
 
-// Page Views
 export const logPageView = async (pageName: string, pageUrl: string) => {
   await logActivity('page_view', `Viewed ${pageName} page`, { page_name: pageName, page_url: pageUrl });
 };
 
-// Candidate Actions
 export const logCVDownload = async (candidateId: string, candidateName: string) => {
   await logActivity('cv_download', `Downloaded CV for ${candidateName}`, { candidate_id: candidateId, candidate_name: candidateName });
 };
@@ -307,7 +296,6 @@ export const logCandidateApplied = async (candidateId: string, jobId: string, jo
   await logActivity('candidate_applied', `Candidate applied for job: ${jobTitle}`, { candidate_id: candidateId, job_id: jobId, job_title: jobTitle });
 };
 
-// Job Actions
 export const logJobView = async (jobId: string, jobTitle: string) => {
   await logActivity('job_view', `Viewed job: ${jobTitle}`, { job_id: jobId, job_title: jobTitle });
 };
@@ -324,7 +312,6 @@ export const logJobApplicationView = async (applicationId: string, candidateName
   await logActivity('job_application_view', `Viewed job application for ${candidateName}`, { application_id: applicationId, candidate_name: candidateName });
 };
 
-// Reports & Export
 export const logReportGenerated = async (reportName: string, format: string) => {
   await logActivity('report_generated', `Generated ${reportName} report (${format})`, { 
     report_name: reportName, 
@@ -340,12 +327,10 @@ export const logExportData = async (exportType: string, recordCount: number) => 
   });
 };
 
-// Settings
 export const logSettingsChange = async (settingName: string, oldValue: any, newValue: any) => {
   await logActivity('settings_change', `Changed setting: ${settingName}`, { setting: settingName, old_value: oldValue, new_value: newValue });
 };
 
-// Notifications
 export const logNotificationRead = async (notificationId: string, notificationType: string) => {
   await logActivity('notification_read', `Read notification: ${notificationType}`, { notification_id: notificationId, type: notificationType });
 };

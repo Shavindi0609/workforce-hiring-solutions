@@ -1,5 +1,3 @@
-// Admin/AdminActivityDashboard.tsx - COMPLETE FIXED VERSION
-
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { 
@@ -8,7 +6,6 @@ import {
   BarChart, RefreshCw, Download as DownloadIcon, X, Trash2
 } from 'lucide-react';
 
-// Custom date formatting functions (no external dependency)
 const formatDate = (date: Date | string): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
   const month = d.toLocaleString('default', { month: 'short' });
@@ -86,18 +83,15 @@ export default function AdminActivityDashboard() {
   const [deleting, setDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Use refreshKey to force re-fetch
   useEffect(() => {
     fetchUsers();
     fetchActivityData();
   }, [dateRange, selectedUser, selectedActivityType, refreshKey]);
 
-  // FIXED: Properly fetch all users including both admins
   const fetchUsers = async () => {
     try {
       const userMap = new Map();
 
-      // 1. Get users from profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, email, role');
@@ -115,7 +109,6 @@ export default function AdminActivityDashboard() {
         });
       }
 
-      // 2. Get users from activity logs
       const { data: activityUsers, error: activityError } = await supabase
         .from('activity_logs')
         .select('user_id, user_email, user_role')
@@ -143,7 +136,6 @@ export default function AdminActivityDashboard() {
         });
       }
 
-      // 3. Get users from daily_activity_summary
       const { data: summaryUsers, error: summaryError } = await supabase
         .from('daily_activity_summary')
         .select('user_id, user_email, user_role');
@@ -170,20 +162,16 @@ export default function AdminActivityDashboard() {
         });
       }
 
-      // 4. IMPORTANT: Also add known admin users manually
-      // This ensures both admins appear even if they have no activity logs
       const knownAdmins = [
         { email: 'shavindialaoka69@gmail.com', name: 'Shavindi' },
         { email: 'dhammika@gmail.com', name: 'Dhammika' }
       ];
 
       knownAdmins.forEach(admin => {
-        // Check if user already exists in map by email
         let exists = false;
         userMap.forEach((user) => {
           if (user.email === admin.email) {
             exists = true;
-            // Update role to admin if not already
             if (user.role !== 'admin') {
               user.role = 'admin';
             }
@@ -191,9 +179,8 @@ export default function AdminActivityDashboard() {
         });
 
         if (!exists) {
-          // Add the admin user with a temporary ID (using email as ID)
           userMap.set(admin.email, {
-            id: admin.email, // Use email as ID for display
+            id: admin.email, 
             full_name: admin.name,
             email: admin.email,
             role: 'admin'
@@ -201,20 +188,18 @@ export default function AdminActivityDashboard() {
         }
       });
 
-      // Convert map to array and sort by name
       const uniqueUsers = Array.from(userMap.values())
         .sort((a, b) => (a.full_name || a.email).localeCompare(b.full_name || b.email));
 
       setUsers(uniqueUsers);
       
-      // Build user cache
       const cache = new Map();
       uniqueUsers.forEach((user: any) => {
         cache.set(user.id, user);
       });
       setUserCache(cache);
       
-      console.log('✅ Fetched users:', uniqueUsers.length, uniqueUsers);
+      console.log(' Fetched users:', uniqueUsers.length, uniqueUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -223,7 +208,6 @@ export default function AdminActivityDashboard() {
   const fetchActivityData = async () => {
     setLoading(true);
     try {
-      // Build the query
       let detailQuery = supabase
         .from('activity_logs')
         .select('*')
@@ -232,7 +216,6 @@ export default function AdminActivityDashboard() {
         .order('created_at', { ascending: false });
 
       if (selectedUser !== 'all') {
-        // If selected user is an email (from manually added admins), handle it
         if (selectedUser.includes('@')) {
           detailQuery = detailQuery.eq('user_email', selectedUser);
         } else {
@@ -258,11 +241,9 @@ export default function AdminActivityDashboard() {
 
       setActivities(detailData || []);
 
-      // Build daily summaries from the fetched activities
       const summaries = buildDailySummaries(detailData || []);
       setDailySummaries(summaries);
 
-      // Fetch missing users
       const userIds = new Set<string>();
       detailData?.forEach((activity: ActivityLog) => {
         if (activity.user_id) {
@@ -281,7 +262,6 @@ export default function AdminActivityDashboard() {
     }
   };
 
-  // Build daily summaries from activities
   const buildDailySummaries = (activities: ActivityLog[]): DailySummary[] => {
     const summaryMap = new Map<string, DailySummary>();
 
@@ -309,7 +289,6 @@ export default function AdminActivityDashboard() {
       const summary = summaryMap.get(key)!;
       summary.total_activities++;
       
-      // Count activity types
       switch (activity.activity_type) {
         case 'cv_download':
           summary.cv_downloads++;
@@ -331,14 +310,12 @@ export default function AdminActivityDashboard() {
       summary.activities.push(activity);
     });
 
-    // Sort activities within each summary by created_at descending
     summaryMap.forEach((summary) => {
       summary.activities.sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
     });
 
-    // Sort summaries by date descending
     return Array.from(summaryMap.values()).sort((a, b) => 
       b.activity_date.localeCompare(a.activity_date)
     );
@@ -409,24 +386,20 @@ export default function AdminActivityDashboard() {
     }
   };
 
-  // Force refresh function - clears all state and triggers re-fetch
   const forceRefresh = async () => {
     try {
-      // Clear all state
       setUserCache(new Map());
       setUsers([]);
       setActivities([]);
       setDailySummaries([]);
       setExpandedDay(null);
       
-      // Increment refresh key to force useEffect to re-run
       setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Error during force refresh:', error);
     }
   };
 
-  // Delete functions
   const handleDeleteSingle = async (activityId: string) => {
     if (!window.confirm('Are you sure you want to delete this activity?')) return;
     

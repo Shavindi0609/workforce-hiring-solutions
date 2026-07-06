@@ -1,4 +1,3 @@
-// Admin/JobsManagement.tsx
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Users, UserPlus, Sparkles, Search, Filter } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -32,7 +31,6 @@ export default function JobsManagement() {
     status: 'Open' as 'Open' | 'Closed' | 'On Hold'
   });
 
-  // Fetch fields when component mounts
   useEffect(() => {
     fetchFields();
   }, []);
@@ -41,10 +39,8 @@ export default function JobsManagement() {
   const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
   const statuses: Array<'Open' | 'Closed' | 'On Hold'> = ['Open', 'Closed', 'On Hold'];
 
-  // Get active fields for the dropdown
   const activeFields = fields.filter(field => field.status === 'Active');
 
-  // Filter jobs
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           job.field.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,7 +49,6 @@ export default function JobsManagement() {
     return matchesSearch && matchesStatus;
   });
 
-  // Fetch candidates
   useEffect(() => {
     fetchCandidates();
   }, []);
@@ -76,7 +71,6 @@ export default function JobsManagement() {
     e.preventDefault();
     try {
       if (selectedJob) {
-        // Log job edit activity
         const changes = {
           title: formData.title !== selectedJob.title ? { old: selectedJob.title, new: formData.title } : undefined,
           field: formData.field !== selectedJob.field ? { old: selectedJob.field, new: formData.field } : undefined,
@@ -86,7 +80,6 @@ export default function JobsManagement() {
         await logJobEdit(selectedJob.id, formData.title, changes);
         await updateJob(selectedJob.id, formData);
       } else {
-        // Log job create activity
         await logJobCreate(formData.title, formData.field);
         await createJob(formData);
       }
@@ -115,7 +108,6 @@ export default function JobsManagement() {
   };
 
   const handleEdit = (job: Job) => {
-    // Log job view activity when editing
     logJobView(job.id, job.title);
     
     setSelectedJob(job);
@@ -140,7 +132,6 @@ export default function JobsManagement() {
   };
 
   const handleViewApplicants = (job: Job) => {
-    // Log job application view activity
     logJobApplicationView(job.id, job.title);
     
     setSelectedJobForApplicants(job);
@@ -149,7 +140,6 @@ export default function JobsManagement() {
 
   const handleCreateJobForCandidate = (candidate: any) => {
     setSelectedCandidate(candidate);
-    // Auto-fill form with candidate's profile
     setFormData({
       title: `${candidate.interested_field} Specialist`,
       description: `We are looking for a talented ${candidate.interested_field} professional to join our team.\n\n**About the Role:**\nThis is an excellent opportunity for someone with ${candidate.experience_level || 'relevant'} experience in ${candidate.interested_field}.\n\n**What We Offer:**\n- Competitive salary (${candidate.salary_range || 'negotiable'})\n- Flexible work arrangements\n- Professional development opportunities\n- Great team environment\n\n**Start Date:** ${candidate.availability === 'Immediate' ? 'Immediate start available' : 'Flexible start date'}\n\nIf you're passionate about ${candidate.interested_field} and ready to make an impact, we want to hear from you!`,
@@ -164,14 +154,9 @@ export default function JobsManagement() {
     setShowCandidateBasedForm(true);
   };
 
-  // Handle candidate application
   const handleCandidateApply = async (candidateId: string, jobId: string, jobTitle: string) => {
     try {
-      // Log candidate applied activity
       await logCandidateApplied(candidateId, jobId, jobTitle);
-      
-      // Here you would also update the application status in the database
-      // const { error } = await supabase.from('applications').insert({...});
       
       toast.success('Candidate applied successfully!');
     } catch (error) {
@@ -538,7 +523,6 @@ export default function JobsManagement() {
                   </div>
                 </div>
               ) : (
-                // Job Creation Form Pre-filled with Candidate Data
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="bg-blue-50 p-4 rounded-lg mb-4">
                     <h3 className="font-semibold mb-2">Creating job for: {selectedCandidate.name}</h3>
