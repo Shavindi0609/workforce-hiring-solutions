@@ -1,4 +1,3 @@
-// src/hooks/useCandidates.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient'; 
 import toast from 'react-hot-toast';
@@ -21,7 +20,6 @@ export const useCandidates = () => {
                 .from('candidates')
                 .select('*', { count: 'exact' });
 
-            // Apply filters using correct column names
             if (filters?.search) {
                 query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,interested_field.ilike.%${filters.search}%`);
             }
@@ -39,11 +37,10 @@ export const useCandidates = () => {
 
             const { data, error: fetchError, count } = await query;
 
-            console.log('📊 Fetch result:', { dataLength: data?.length, count, error: fetchError });
+            console.log(' Fetch result:', { dataLength: data?.length, count, error: fetchError });
 
             if (fetchError) throw fetchError;
             
-            // Map database columns to frontend fields
             const mappedCandidates = data?.map((c: any) => ({
                 id: c.id,
                 name: c.name || '',
@@ -80,10 +77,7 @@ export const useCandidates = () => {
 
     const createCandidate = async (candidateData: CreateCandidateDto) => {
         try {
-            console.log('📝 Creating candidate with data:', candidateData);
-            
-            // Build insert data with CORRECT database column names
-            // NO NEED to generate ID - Supabase will auto-generate it
+            console.log(' Creating candidate with data:', candidateData);
             const insertData: any = {
                 name: candidateData.name || '',
                 email: candidateData.email || '',
@@ -93,7 +87,6 @@ export const useCandidates = () => {
                 skills: candidateData.skills || [],
             };
 
-            // Map frontend field names to database column names
             if (candidateData.field) {
                 insertData.interested_field = candidateData.field;
             }
@@ -122,7 +115,7 @@ export const useCandidates = () => {
                 insertData.avatar_url = candidateData.avatar_url;
             }
 
-            console.log('📤 Inserting data (ID will be auto-generated):', insertData);
+            console.log(' Inserting data (ID will be auto-generated):', insertData);
 
             const { data, error } = await supabase
                 .from('candidates')
@@ -131,17 +124,17 @@ export const useCandidates = () => {
                 .single();
 
             if (error) {
-                console.error('❌ Supabase insert error:', error);
+                console.error(' Supabase insert error:', error);
                 throw error;
             }
 
-            console.log('✅ Candidate created with ID:', data?.id);
+            console.log('Candidate created with ID:', data?.id);
 
             toast.success('Candidate added successfully');
             await fetchCandidates();
             return data;
         } catch (err: any) {
-            console.error('❌ Create error:', err);
+            console.error('Create error:', err);
             toast.error('Failed to create candidate: ' + err.message);
             throw err;
         }
@@ -149,7 +142,6 @@ export const useCandidates = () => {
 
     const updateCandidate = async (id: string, updates: UpdateCandidateDto) => {
         try {
-            // Build update data with CORRECT database column names
             const updateData: any = {};
             
             if (updates.name !== undefined) updateData.name = updates.name;
@@ -159,7 +151,6 @@ export const useCandidates = () => {
             if (updates.availability !== undefined) updateData.availability = updates.availability;
             if (updates.skills !== undefined) updateData.skills = updates.skills;
             
-            // Map frontend field names to database column names
             if (updates.field !== undefined) updateData.interested_field = updates.field;
             if (updates.experience !== undefined) updateData.years_of_experience = updates.experience;
             if (updates.salary_range !== undefined) updateData.salary_range = updates.salary_range;
@@ -168,7 +159,7 @@ export const useCandidates = () => {
             if (updates.willing_to_contact !== undefined) updateData.willing_to_contact = updates.willing_to_contact;
             if (updates.avatar_url !== undefined) updateData.avatar_url = updates.avatar_url;
             
-            console.log('📤 Updating candidate with data:', updateData);
+            console.log(' Updating candidate with data:', updateData);
 
             const { data, error } = await supabase
                 .from('candidates')
@@ -178,17 +169,17 @@ export const useCandidates = () => {
                 .single();
 
             if (error) {
-                console.error('❌ Supabase update error:', error);
+                console.error(' Supabase update error:', error);
                 throw error;
             }
 
-            console.log('✅ Candidate updated:', data);
+            console.log(' Candidate updated:', data);
 
             toast.success('Candidate updated successfully');
             await fetchCandidates();
             return data;
         } catch (err: any) {
-            console.error('❌ Update error:', err);
+            console.error(' Update error:', err);
             toast.error('Failed to update candidate: ' + err.message);
             throw err;
         }

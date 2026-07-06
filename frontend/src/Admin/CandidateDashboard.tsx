@@ -1,5 +1,3 @@
-// Admin/CandidatesPage.tsx - COMPLETE FIXED VERSION
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2, Download } from 'lucide-react';
 import { useCandidates } from '../hooks/useCandidates';
@@ -96,7 +94,6 @@ export default function CandidatesPage() {
     }, []);
 
     const handleEditCandidate = useCallback((candidate: Candidate) => {
-        // Log candidate view activity - with null check
         if (candidate.id && candidate.name) {
             logCandidateView(candidate.id, candidate.name);
         }
@@ -120,13 +117,11 @@ export default function CandidatesPage() {
     const handleSubmit = useCallback(async (data: CreateCandidateDto | Partial<Candidate>) => {
         try {
             if (selectedCandidate) {
-                // Log candidate edit activity
                 const candidateName = data.name || selectedCandidate.name || 'Unknown';
                 await logCandidateEdit(selectedCandidate.id, candidateName);
                 await updateCandidate(selectedCandidate.id, data);
                 toast.success('Candidate updated successfully!');
             } else {
-                // Log candidate create activity
                 const name = data.name || 'Unknown';
                 const email = data.email || '';
                 await logCandidateCreate(name, email);
@@ -149,7 +144,6 @@ export default function CandidatesPage() {
     }, [fetchCandidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
 
     const handleViewCandidate = useCallback((candidateId: string) => {
-        // Find candidate name for logging
         const candidate = candidates.find(c => c.id === candidateId);
         if (candidate && candidate.id && candidate.name) {
             logCandidateView(candidateId, candidate.name);
@@ -163,19 +157,16 @@ export default function CandidatesPage() {
         setSelectedCandidateId(null);
     }, []);
 
-    // Handle CV download - FIXED: Properly typed parameters
     const handleDownloadCV = useCallback((candidateId: string, candidateName: string, cvUrl: string) => {
         if (!cvUrl) {
             toast.error('No CV available for this candidate');
             return;
         }
         
-        // Log CV download activity
         if (candidateId) {
             logCVDownload(candidateId, candidateName);
         }
         
-        // Open the CV in a new tab or download it
         window.open(cvUrl, '_blank');
         toast.success(`Downloading CV for ${candidateName}`);
     }, []);
@@ -324,7 +315,6 @@ export default function CandidatesPage() {
                 return;
             }
 
-            // Log export activity
             await logExportData(format.toUpperCase(), dataToExport.length);
 
             if (format === 'csv') {
@@ -562,7 +552,6 @@ export default function CandidatesPage() {
                             </thead>
                             <tbody className="text-sm">
                                 {filteredCandidates.map((candidate) => {
-                                    // Ensure candidateName is always a string
                                     const candidateName: string = candidate.name || 'Candidate';
                                     const candidateId: string = candidate.id;
                                     const cvUrl: string | undefined = candidate.cv_url;
