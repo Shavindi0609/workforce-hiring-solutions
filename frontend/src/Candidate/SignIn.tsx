@@ -14,7 +14,7 @@ import {
 
 import { FcGoogle } from 'react-icons/fc';
 import { FaLinkedin } from 'react-icons/fa';
-
+import { logLogin } from '../utils/activityLogger';
 import logo from '../../assets/logo.png';
 
 const SignIn = () => {
@@ -80,6 +80,7 @@ const SignIn = () => {
       }
 
       if (data.user) {
+        await logLogin(email);
         // Get user role from profiles table
         const { data: profile, error: profileError } = await supabase
           .from('profiles')

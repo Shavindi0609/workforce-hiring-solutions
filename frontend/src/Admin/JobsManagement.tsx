@@ -1,3 +1,4 @@
+// Admin/JobsManagement.tsx
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, X, Users, UserPlus, Sparkles, Search, Filter } from 'lucide-react';
 import { supabase } from '../supabaseClient';
@@ -5,7 +6,8 @@ import { useJobs } from '../hooks/useJobs';
 import { useFields } from '../hooks/useFields';
 import { ApplicantsModal } from '../components/admin/ApplicantsModal';
 import type { Job } from '../types/job';
-
+import { logJobView, logJobCreate, logJobEdit, logCandidateApplied, logJobApplicationView } from '../utils/activityLogger';
+import toast from 'react-hot-toast';
 export default function JobsManagement() {
   const { jobs, loading, createJob, updateJob, deleteJob } = useJobs();
   const { fields, fetchFields } = useFields();
@@ -72,14 +74,28 @@ export default function JobsManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedJob) {
-      await updateJob(selectedJob.id, formData);
-    } else {
-      await createJob(formData);
+    try {
+      if (selectedJob) {
+        // Log job edit activity
+        const changes = {
+          title: formData.title !== selectedJob.title ? { old: selectedJob.title, new: formData.title } : undefined,
+          field: formData.field !== selectedJob.field ? { old: selectedJob.field, new: formData.field } : undefined,
+          status: formData.status !== selectedJob.status ? { old: selectedJob.status, new: formData.status } : undefined
+        };
+        
+        await logJobEdit(selectedJob.id, formData.title, changes);
+        await updateJob(selectedJob.id, formData);
+      } else {
+        // Log job create activity
+        await logJobCreate(formData.title, formData.field);
+        await createJob(formData);
+      }
+      setIsModalOpen(false);
+      setShowCandidateBasedForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving job:', error);
     }
-    setIsModalOpen(false);
-    setShowCandidateBasedForm(false);
-    resetForm();
   };
 
   const resetForm = () => {
@@ -99,6 +115,9 @@ export default function JobsManagement() {
   };
 
   const handleEdit = (job: Job) => {
+    // Log job view activity when editing
+    logJobView(job.id, job.title);
+    
     setSelectedJob(job);
     setFormData({
       title: job.title,
@@ -121,6 +140,9 @@ export default function JobsManagement() {
   };
 
   const handleViewApplicants = (job: Job) => {
+    // Log job application view activity
+    logJobApplicationView(job.id, job.title);
+    
     setSelectedJobForApplicants(job);
     setShowApplicantsModal(true);
   };
@@ -140,6 +162,22 @@ export default function JobsManagement() {
       status: 'Open'
     });
     setShowCandidateBasedForm(true);
+  };
+
+  // Handle candidate application
+  const handleCandidateApply = async (candidateId: string, jobId: string, jobTitle: string) => {
+    try {
+      // Log candidate applied activity
+      await logCandidateApplied(candidateId, jobId, jobTitle);
+      
+      // Here you would also update the application status in the database
+      // const { error } = await supabase.from('applications').insert({...});
+      
+      toast.success('Candidate applied successfully!');
+    } catch (error) {
+      console.error('Error applying candidate:', error);
+      toast.error('Failed to apply candidate');
+    }
   };
 
   if (loading) {

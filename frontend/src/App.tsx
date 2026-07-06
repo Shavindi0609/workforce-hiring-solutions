@@ -1,4 +1,4 @@
-// src/App.tsx
+// App.tsx
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -28,6 +28,7 @@ import { saveCandidate } from './Candidate/candidateService';
 import MyCVPage from './Candidate/MyCVPage';
 import EditProfile from './Candidate/Editprofile';
 import JobsManagement from './Admin/JobsManagement';
+import AdminActivityDashboard from './Admin/AdminActivityDashboard'; // Add this import
 
 import type { BasicInfoData, ProfessionalInfoData, CandidateFormData } from './types/candidate';
 
@@ -80,34 +81,33 @@ function RegistrationFlow() {
     navigate('/candidate/registration/upload');
   };
 
-const handleFinalSubmit = async () => {
-  // formData.cv check
-  if (!formData.cv) {
-    alert('CV required');
-    return;
-  }
+  const handleFinalSubmit = async () => {
+    if (!formData.cv) {
+      alert('CV required');
+      return;
+    }
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    navigate('/signin');
-    return;
-  }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
 
-  try {
-    await saveCandidate(
-      {
-        basicData: basicData!,
-        professionalData: professionalData!,
-        formData,
-        cvFile: formData.cv,
-      },
-      user.id
-    );
-    navigate('/candidate/profile'); // Success page
-  } catch (err: any) {
-    alert(`Error: ${err.message}`);
-  }
-};
+    try {
+      await saveCandidate(
+        {
+          basicData: basicData!,
+          professionalData: professionalData!,
+          formData,
+          cvFile: formData.cv,
+        },
+        user.id
+      );
+      navigate('/candidate/profile');
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -177,11 +177,10 @@ const handleFinalSubmit = async () => {
   );
 }
 
-// Main App - All routes are public (no authentication required)
+// Main App
 function App() {
   return (
     <BrowserRouter>
-      {/* Toast notifications container */}
       <Toaster 
         position="top-right"
         toastOptions={{
@@ -208,25 +207,24 @@ function App() {
       />
       
       <Routes>
-        {/* Public Routes - Everyone can access */}
+        {/* Public Routes */}
         <Route path="/signin" element={<SignIn />} />
         <Route path="/home" element={<Home />} />
         
-        {/* Registration Flow - Public access */}
+        {/* Registration Flow */}
         <Route path="/candidate/registration/*" element={<RegistrationFlow />} />
         
-        {/* Dashboard Routes - Now public without authentication */}
+        {/* Dashboard Routes */}
         <Route element={<DashboardLayout />}>
           <Route path="/admin/candidate-dashboard" element={<CandidateDashboard />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/activity-dashboard" element={<AdminActivityDashboard />} />
           <Route path="/settings" element={<SettingsPage />} />       
           <Route path="/exportdata" element={<ExportData />} />
           <Route path="/admin/reports" element={<Reports />} />
           <Route path="/admin/fields" element={<Fields />} />
           <Route path="/admin/skills" element={<Skills />} />
           <Route path="/admin/jobs" element={<JobsManagement />} />
-
-        
           <Route path="/admin/salary-insights" element={<SalaryInsights />} />
         </Route>
         
@@ -236,7 +234,6 @@ function App() {
           <Route path="/candidate/profile" element={<ProfileCreated />} />
           <Route path="/candidate/cv" element={<MyCVPage />} />
           <Route path="/candidate/edit-profile" element={<EditProfile />} />
-          {/* ... other candidate routes */}
         </Route>
 
         {/* Redirects */}

@@ -1,8 +1,8 @@
-// In CandidateDetailsModal.tsx, add this function and display the ID
-
+// components/admin/CandidateDetailsModal.tsx
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabaseClient';
 import { X, Download, Eye, FileText, Mail, Phone, Calendar, Briefcase, Clock, DollarSign, MapPin, Copy } from 'lucide-react';
+import { logCVDownload } from '../../utils/activityLogger';
 
 interface CandidateDetailsModalProps {
     candidateId: string;
@@ -29,7 +29,7 @@ interface CandidateFullDetails {
     created_at: string;
 }
 
-// Add this helper function to generate candidate ID
+// Helper function to generate candidate ID
 function generateCandidateId(id: string, createdAt: string): string {
     const year = new Date(createdAt).getFullYear();
     const shortId = id.replace(/-/g, "").slice(0, 4).toUpperCase();
@@ -66,6 +66,8 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
 
     const handleViewCV = () => {
         if (candidate?.cv_url) {
+            // Log CV view activity
+            logCVDownload(candidate.id, candidate.name || 'candidate');
             window.open(candidate.cv_url, '_blank');
         } else {
             alert('No CV uploaded yet.');
@@ -74,6 +76,9 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
 
     const handleDownloadCV = () => {
         if (candidate?.cv_url) {
+            // Log CV download activity
+            logCVDownload(candidate.id, candidate.name || 'candidate');
+            
             const link = document.createElement('a');
             link.href = candidate.cv_url;
             link.download = candidate.cv_filename || 'cv.pdf';
@@ -119,7 +124,7 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
                     </div>
                 ) : candidate ? (
                     <div className="p-4 sm:p-6">
-                        {/* Candidate ID Banner - NEW */}
+                        {/* Candidate ID Banner */}
                         <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 sm:p-5">
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                 <div>
@@ -166,9 +171,8 @@ export default function CandidateDetailsModal({ candidateId, onClose }: Candidat
                             </div>
                         </div>
 
-                        {/* Rest of your existing code... */}
+                        {/* Personal Information */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Personal Information */}
                             <div className="space-y-4">
                                 <h4 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
                                     <FileText size={18} className="sm:w-5 sm:h-5" />
