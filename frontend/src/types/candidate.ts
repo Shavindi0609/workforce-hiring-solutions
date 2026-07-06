@@ -90,7 +90,9 @@ export interface CreateCandidateDto {
     salary_range: string;
     skills?: string[];
     willing_to_contact?: boolean;
+    cv_text?: string;
     cv_url?: string;
+    avatar_url?: string;
 }
 
 export interface UpdateCandidateDto extends Partial<CreateCandidateDto> {

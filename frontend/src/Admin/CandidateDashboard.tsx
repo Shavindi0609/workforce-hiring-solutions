@@ -1,3 +1,5 @@
+// Admin/CandidatesPage.tsx - COMPLETE FIXED VERSION
+
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Search, Plus, Eye, Edit2, Trash2, Download } from 'lucide-react';
 import { useCandidates } from '../hooks/useCandidates';
@@ -6,6 +8,13 @@ import { CandidateModal } from '../components/CandidateModal';
 import type { Candidate, CreateCandidateDto } from '../types/candidate';
 import CandidateDetailsModal from '../components/admin/CandidateDetailsModal';
 import toast from 'react-hot-toast';
+import { 
+  logCandidateView, 
+  logCandidateCreate, 
+  logCandidateEdit, 
+  logCVDownload,
+  logExportData 
+} from '../utils/activityLogger';
 
 function generateCandidateId(id: string, createdAt: string): string {
     const year = new Date(createdAt).getFullYear();
@@ -56,9 +65,9 @@ export default function CandidatesPage() {
 
     const withMatch = candidates
         .filter(candidate => {
-            const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                 candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                 candidate.field.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = candidate.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 candidate.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 candidate.field?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesField = fieldFilter === 'All Fields' || candidate.field === fieldFilter;
             const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
             const matchesAvailability = availabilityFilter === 'All' || candidate.availability === availabilityFilter;
@@ -87,6 +96,10 @@ export default function CandidatesPage() {
     }, []);
 
     const handleEditCandidate = useCallback((candidate: Candidate) => {
+        // Log candidate view activity - with null check
+        if (candidate.id && candidate.name) {
+            logCandidateView(candidate.id, candidate.name);
+        }
         setSelectedCandidate(candidate);
         setModalTitle('Edit Candidate');
         setIsModalOpen(true);
@@ -94,15 +107,35 @@ export default function CandidatesPage() {
 
     const handleDeleteCandidate = useCallback(async (id: string) => {
         if (window.confirm('Are you sure you want to delete this candidate?')) {
-            await deleteCandidate(id);
+            try {
+                await deleteCandidate(id);
+                toast.success('Candidate deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting candidate:', error);
+                toast.error('Failed to delete candidate');
+            }
         }
     }, [deleteCandidate]);
 
     const handleSubmit = useCallback(async (data: CreateCandidateDto | Partial<Candidate>) => {
-        if (selectedCandidate) {
-            await updateCandidate(selectedCandidate.id, data);
-        } else {
-            await createCandidate(data as CreateCandidateDto);
+        try {
+            if (selectedCandidate) {
+                // Log candidate edit activity
+                const candidateName = data.name || selectedCandidate.name || 'Unknown';
+                await logCandidateEdit(selectedCandidate.id, candidateName);
+                await updateCandidate(selectedCandidate.id, data);
+                toast.success('Candidate updated successfully!');
+            } else {
+                // Log candidate create activity
+                const name = data.name || 'Unknown';
+                const email = data.email || '';
+                await logCandidateCreate(name, email);
+                await createCandidate(data as CreateCandidateDto);
+                toast.success('Candidate created successfully!');
+            }
+        } catch (error) {
+            console.error('Error saving candidate:', error);
+            toast.error('Failed to save candidate');
         }
     }, [selectedCandidate, updateCandidate, createCandidate]);
 
@@ -116,27 +149,49 @@ export default function CandidatesPage() {
     }, [fetchCandidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
 
     const handleViewCandidate = useCallback((candidateId: string) => {
+        // Find candidate name for logging
+        const candidate = candidates.find(c => c.id === candidateId);
+        if (candidate && candidate.id && candidate.name) {
+            logCandidateView(candidateId, candidate.name);
+        }
         setSelectedCandidateId(candidateId);
         setIsDetailsModalOpen(true);
-    }, []);
+    }, [candidates]);
 
     const handleCloseDetailsModal = useCallback(() => {
         setIsDetailsModalOpen(false);
         setSelectedCandidateId(null);
     }, []);
 
+    // Handle CV download - FIXED: Properly typed parameters
+    const handleDownloadCV = useCallback((candidateId: string, candidateName: string, cvUrl: string) => {
+        if (!cvUrl) {
+            toast.error('No CV available for this candidate');
+            return;
+        }
+        
+        // Log CV download activity
+        if (candidateId) {
+            logCVDownload(candidateId, candidateName);
+        }
+        
+        // Open the CV in a new tab or download it
+        window.open(cvUrl, '_blank');
+        toast.success(`Downloading CV for ${candidateName}`);
+    }, []);
+
     const exportToCSV = useCallback((data: Candidate[]) => {
         const headers = ['Candidate ID', 'Name', 'Email', 'Phone', 'Field', 'Experience', 'Status', 'Availability', 'Salary Range'];
         const csvRows = data.map(c => [
             `"${generateCandidateId(c.id, c.created_at || new Date().toISOString())}"`,
-            `"${c.name}"`,
-            `"${c.email}"`,
-            `"${c.phone}"`,
-            `"${c.field}"`,
-            `"${c.experience}"`,
-            `"${c.status}"`,
-            `"${c.availability}"`,
-            `"${c.salary_range}"`
+            `"${c.name || ''}"`,
+            `"${c.email || ''}"`,
+            `"${c.phone || ''}"`,
+            `"${c.field || ''}"`,
+            `"${c.experience || ''}"`,
+            `"${c.status || ''}"`,
+            `"${c.availability || ''}"`,
+            `"${c.salary_range || ''}"`
         ]);
         
         const csvContent = [
@@ -208,22 +263,20 @@ export default function CandidatesPage() {
                     fillColor: [243, 244, 246],
                 },
                 columnStyles: {
-                    0: { cellWidth: 32, halign: 'center' },  // Candidate ID - increased
-                    1: { cellWidth: 32, halign: 'left' },    // Name - increased
-                    2: { cellWidth: 42, halign: 'left' },    // Email - increased
-                    3: { cellWidth: 26, halign: 'left' },    // Phone - increased
-                    4: { cellWidth: 28, halign: 'left' },    // Field - increased
-                    5: { cellWidth: 28, halign: 'center' },  // Experience - increased
-                    6: { cellWidth: 25, halign: 'center' },  // Status - increased
-                    7: { cellWidth: 28, halign: 'center' },  // Availability - increased
-                    8: { cellWidth: 34, halign: 'left' },    // Salary Range - increased
+                    0: { cellWidth: 32, halign: 'center' },
+                    1: { cellWidth: 32, halign: 'left' },
+                    2: { cellWidth: 42, halign: 'left' },
+                    3: { cellWidth: 26, halign: 'left' },
+                    4: { cellWidth: 28, halign: 'left' },
+                    5: { cellWidth: 28, halign: 'center' },
+                    6: { cellWidth: 25, halign: 'center' },
+                    7: { cellWidth: 28, halign: 'center' },
+                    8: { cellWidth: 34, halign: 'left' },
                 },
                 margin: { left: 10, right: 10 }, 
                 tableWidth: 'auto',
                 showHead: 'everyPage',
                 didParseCell: function(data) {
-                   
-                    // Style Candidate ID with blue color
                     if (data.section === 'body' && data.column.index === 0) {
                         data.cell.styles.textColor = [37, 99, 235];
                         data.cell.styles.fontStyle = 'bold';
@@ -270,6 +323,9 @@ export default function CandidatesPage() {
                 toast.error('No candidates to export');
                 return;
             }
+
+            // Log export activity
+            await logExportData(format.toUpperCase(), dataToExport.length);
 
             if (format === 'csv') {
                 exportToCSV(dataToExport);
@@ -320,18 +376,17 @@ export default function CandidatesPage() {
             .map(k => k.trim().toLowerCase())
             .filter(Boolean);
 
-        if (keywords.length === 0) return -1; // keyword search not active
+        if (keywords.length === 0) return -1;
 
         const searchableParts: string[] = [
-            candidate.name,
-            candidate.field,
-            candidate.experience,
-            candidate.status,
-            candidate.availability,
+            candidate.name || '',
+            candidate.field || '',
+            candidate.experience || '',
+            candidate.status || '',
+            candidate.availability || '',
             candidate.cv_text ?? '', 
             ...(candidate.skills ?? []),
         ];
-
 
         const searchableText = searchableParts.join(' ').toLowerCase();
 
@@ -506,72 +561,98 @@ export default function CandidatesPage() {
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
-                                {filteredCandidates.map((candidate) => (
-                                    <tr key={candidate.id} className="border-b hover:bg-gray-50 transition-colors">
-                                        <td className="p-3 sm:p-4">
-                                            <input type="checkbox" className="rounded" />
-                                        </td>
-                                        <td className="p-3 sm:p-4">
-                                            <div className="flex items-center gap-2 sm:gap-3">
-                                                <img src={candidate.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
-                                                <div className="min-w-0">
-                                                    <p className="font-medium text-gray-900 text-sm truncate">{candidate.name}</p>
-                                                    <p className="text-xs text-gray-400 truncate">{candidate.email}</p>
-                                                    <p className="text-xs text-gray-400 hidden sm:block truncate">{candidate.phone}</p>
+                                {filteredCandidates.map((candidate) => {
+                                    // Ensure candidateName is always a string
+                                    const candidateName: string = candidate.name || 'Candidate';
+                                    const candidateId: string = candidate.id;
+                                    const cvUrl: string | undefined = candidate.cv_url;
+                                    
+                                    return (
+                                        <tr key={candidateId} className="border-b hover:bg-gray-50 transition-colors">
+                                            <td className="p-3 sm:p-4">
+                                                <input type="checkbox" className="rounded" />
+                                            </td>
+                                            <td className="p-3 sm:p-4">
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <img 
+                                                        src={candidate.avatar_url || '/default-avatar.png'} 
+                                                        className="w-8 h-8 rounded-full object-cover flex-shrink-0" 
+                                                        alt={candidateName}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).src = '/default-avatar.png';
+                                                        }}
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-gray-900 text-sm truncate">{candidateName}</p>
+                                                        <p className="text-xs text-gray-400 truncate">{candidate.email || ''}</p>
+                                                        <p className="text-xs text-gray-400 hidden sm:block truncate">{candidate.phone || ''}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-3 sm:p-4 font-medium hidden sm:table-cell">{candidate.field}</td>
-                                        <td className="p-3 sm:p-4 hidden md:table-cell">{candidate.experience}</td>
-                                        <td className="p-3 sm:p-4">
-                                            <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${
-                                                candidate.status === 'Actively Looking' 
-                                                    ? 'bg-green-100 text-green-700' 
-                                                    : 'bg-orange-100 text-orange-700'
-                                            }`}>
-                                                {candidate.status === 'Actively Looking' ? 'Active' : 'Open'}
-                                            </span>
-                                        </td>
-                                        {cvKeywords.trim() && (
-                                        <td className="p-3 sm:p-4">
-                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                                candidate.matchPercentage >= 70 ? 'bg-green-100 text-green-700' :
-                                                candidate.matchPercentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-gray-100 text-gray-600'
-                                            }`}>
-                                                {candidate.matchPercentage}%
-                                            </span>
-                                        </td>
-                                    )}
-                                        <td className="p-3 sm:p-4 hidden lg:table-cell">{candidate.availability}</td>
-                                        <td className="p-3 sm:p-4 hidden xl:table-cell">{candidate.salary_range}</td>
-                                        <td className="p-3 sm:p-4">
-                                            <div className="flex items-center justify-center gap-1 sm:gap-2">
-                                                <button 
-                                                    onClick={() => handleEditCandidate(candidate)}
-                                                    className="p-1.5 sm:p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteCandidate(candidate.id)}
-                                                    className="p-1.5 sm:p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleViewCandidate(candidate.id)}
-                                                    className="p-1.5 sm:p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors"
-                                                    title="View Details"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="p-3 sm:p-4 font-medium hidden sm:table-cell">{candidate.field || ''}</td>
+                                            <td className="p-3 sm:p-4 hidden md:table-cell">{candidate.experience || ''}</td>
+                                            <td className="p-3 sm:p-4">
+                                                <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${
+                                                    candidate.status === 'Actively Looking' 
+                                                        ? 'bg-green-100 text-green-700' 
+                                                        : 'bg-orange-100 text-orange-700'
+                                                }`}>
+                                                    {candidate.status === 'Actively Looking' ? 'Active' : 'Open'}
+                                                </span>
+                                            </td>
+                                            {cvKeywords.trim() && (
+                                            <td className="p-3 sm:p-4">
+                                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                                    candidate.matchPercentage >= 70 ? 'bg-green-100 text-green-700' :
+                                                    candidate.matchPercentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                    {candidate.matchPercentage}%
+                                                </span>
+                                            </td>
+                                        )}
+                                            <td className="p-3 sm:p-4 hidden lg:table-cell">{candidate.availability || ''}</td>
+                                            <td className="p-3 sm:p-4 hidden xl:table-cell">{candidate.salary_range || ''}</td>
+                                            <td className="p-3 sm:p-4">
+                                                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                                    <button 
+                                                        onClick={() => handleEditCandidate(candidate)}
+                                                        className="p-1.5 sm:p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteCandidate(candidateId)}
+                                                        className="p-1.5 sm:p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleViewCandidate(candidateId)}
+                                                        className="p-1.5 sm:p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    {cvUrl && (
+                                                        <button 
+                                                            onClick={() => {
+                                                                // Use the properly typed variables
+                                                                handleDownloadCV(candidateId, candidateName, cvUrl);
+                                                            }}
+                                                            className="p-1.5 sm:p-1 text-green-500 hover:bg-green-50 rounded transition-colors"
+                                                            title="Download CV"
+                                                        >
+                                                            <Download size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
