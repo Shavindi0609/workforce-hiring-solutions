@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
 import type { ReportFormat } from '../types/report';
+import { logReportGenerated, logExportData } from '../utils/activityLogger';
+import toast from 'react-hot-toast';
 
 const reportDefinitions = [
   { name: 'Candidate Summary', description: 'Overview of candidate statistics and metrics' },
@@ -76,6 +78,9 @@ function Reports() {
     };
     
     try {
+      // Log report generation activity
+      await logReportGenerated(reportName, format);
+      
       await generateReportData(reportName, format, filters);
       downloadReport(reportName, format);
     } catch (error) {
@@ -100,6 +105,9 @@ function Reports() {
     };
     
     try {
+      // Log report generation activity
+      await logReportGenerated(selectedReportName, 'PDF');
+      
       await generateReportData(selectedReportName, 'PDF', filters);
       await refetch();
     } catch (error) {
@@ -108,6 +116,29 @@ function Reports() {
       setIsGenerating(false);
     }
   }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, refetch, isGenerating]);
+
+  // Handle download from recent reports
+  const handleRecentReportDownload = useCallback(async (reportName: string, format: 'PDF' | 'Excel') => {
+    if (isGenerating) return;
+    
+    setIsGenerating(true);
+    try {
+      // Log export data activity
+      await logExportData(`${reportName} (${format})`, 1);
+      
+      // Find the report in generatedReports to get its data
+      const report = generatedReports.find(r => r.name === reportName && r.type === format);
+      if (report) {
+        downloadReport(reportName, format);
+      } else {
+        toast.error('Report not found');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [generatedReports, downloadReport, isGenerating]);
 
   // Prepare summary metrics for display
   const summaryMetricsList = [
@@ -259,7 +290,7 @@ function Reports() {
                       className="reports-download-icon"
                       type="button"
                       aria-label={`Download ${report.name}`}
-                      onClick={() => downloadReport(report.name, report.type)}
+                      onClick={() => handleRecentReportDownload(report.name, report.type)}
                       disabled={isGenerating}
                     >
                       <Download size={16} />

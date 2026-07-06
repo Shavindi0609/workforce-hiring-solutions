@@ -268,7 +268,11 @@ export const logActivity = async (
   });
 };
 
-// Specific activity logging helpers
+// ============================================
+// SPECIFIC ACTIVITY LOGGING HELPERS
+// ============================================
+
+// Authentication
 export const logLogin = async (email: string) => {
   await logActivity('login', `User ${email} logged in`, { user_email: email });
 };
@@ -277,10 +281,12 @@ export const logLogout = async (email: string) => {
   await logActivity('logout', `User ${email} logged out`, { user_email: email });
 };
 
+// Page Views
 export const logPageView = async (pageName: string, pageUrl: string) => {
   await logActivity('page_view', `Viewed ${pageName} page`, { page_name: pageName, page_url: pageUrl });
 };
 
+// Candidate Actions
 export const logCVDownload = async (candidateId: string, candidateName: string) => {
   await logActivity('cv_download', `Downloaded CV for ${candidateName}`, { candidate_id: candidateId, candidate_name: candidateName });
 };
@@ -289,6 +295,19 @@ export const logCandidateView = async (candidateId: string, candidateName: strin
   await logActivity('candidate_view', `Viewed candidate profile: ${candidateName}`, { candidate_id: candidateId, candidate_name: candidateName });
 };
 
+export const logCandidateCreate = async (candidateName: string, email: string) => {
+  await logActivity('candidate_create', `Created new candidate: ${candidateName}`, { candidate_name: candidateName, email });
+};
+
+export const logCandidateEdit = async (candidateId: string, candidateName: string) => {
+  await logActivity('candidate_edit', `Updated candidate: ${candidateName}`, { candidate_id: candidateId, candidate_name: candidateName });
+};
+
+export const logCandidateApplied = async (candidateId: string, jobId: string, jobTitle: string) => {
+  await logActivity('candidate_applied', `Candidate applied for job: ${jobTitle}`, { candidate_id: candidateId, job_id: jobId, job_title: jobTitle });
+};
+
+// Job Actions
 export const logJobView = async (jobId: string, jobTitle: string) => {
   await logActivity('job_view', `Viewed job: ${jobTitle}`, { job_id: jobId, job_title: jobTitle });
 };
@@ -301,34 +320,32 @@ export const logJobEdit = async (jobId: string, jobTitle: string, changes: any) 
   await logActivity('job_edit', `Updated job: ${jobTitle}`, { job_id: jobId, job_title: jobTitle, changes });
 };
 
-export const logCandidateCreate = async (candidateName: string, email: string) => {
-  await logActivity('candidate_create', `Created new candidate: ${candidateName}`, { candidate_name: candidateName, email });
+export const logJobApplicationView = async (applicationId: string, candidateName: string) => {
+  await logActivity('job_application_view', `Viewed job application for ${candidateName}`, { application_id: applicationId, candidate_name: candidateName });
 };
 
-export const logCandidateEdit = async (candidateId: string, candidateName: string) => {
-  await logActivity('candidate_edit', `Updated candidate: ${candidateName}`, { candidate_id: candidateId, candidate_name: candidateName });
+// Reports & Export
+export const logReportGenerated = async (reportName: string, format: string) => {
+  await logActivity('report_generated', `Generated ${reportName} report (${format})`, { 
+    report_name: reportName, 
+    format: format,
+    generated_at: new Date().toISOString()
+  });
 };
 
-export const logReportGenerated = async (reportType: string, period: string) => {
-  await logActivity('report_generated', `Generated ${reportType} report`, { report_type: reportType, period });
+export const logExportData = async (exportType: string, recordCount: number) => {
+  await logActivity('export_data', `Exported ${exportType} with ${recordCount} records`, { 
+    export_type: exportType, 
+    records: recordCount 
+  });
 };
 
+// Settings
 export const logSettingsChange = async (settingName: string, oldValue: any, newValue: any) => {
   await logActivity('settings_change', `Changed setting: ${settingName}`, { setting: settingName, old_value: oldValue, new_value: newValue });
 };
 
-export const logExportData = async (exportType: string, recordCount: number) => {
-  await logActivity('export_data', `Exported ${exportType} data`, { export_type: exportType, records: recordCount });
-};
-
+// Notifications
 export const logNotificationRead = async (notificationId: string, notificationType: string) => {
   await logActivity('notification_read', `Read notification: ${notificationType}`, { notification_id: notificationId, type: notificationType });
-};
-
-export const logCandidateApplied = async (candidateId: string, jobId: string, jobTitle: string) => {
-  await logActivity('candidate_applied', `Candidate applied for job: ${jobTitle}`, { candidate_id: candidateId, job_id: jobId, job_title: jobTitle });
-};
-
-export const logJobApplicationView = async (applicationId: string, candidateName: string) => {
-  await logActivity('job_application_view', `Viewed job application for ${candidateName}`, { application_id: applicationId, candidate_name: candidateName });
 };
