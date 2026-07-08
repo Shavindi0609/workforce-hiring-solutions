@@ -69,12 +69,69 @@ export class ActivityLogger {
   }
 
   async logActivity(data: ActivityLogData) {
+    if (data.activity_type === 'logout') {
+      console.log('Processing logout activity...');
+      
+      if (!this.currentUser) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          this.currentUser = user;
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, full_name, email')
+            .eq('id', user.id)
+            .single();
+          this.currentProfile = profile;
+        }
+      }
+      
+      if (!this.currentUser && data.metadata?.user_email) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, email, role')
+          .eq('email', data.metadata.user_email)
+          .single();
+        
+        if (profile) {
+          this.currentUser = { id: profile.id, email: profile.email };
+          this.currentProfile = { role: profile.role || 'user', email: profile.email };
+        }
+      }
+    }
+
     if (!this.currentUser) {
       await this.loadUser();
     }
     
     if (!this.currentUser) {
       console.warn('No user logged in, activity not logged');
+      if (data.activity_type === 'logout' && data.metadata?.user_email) {
+        console.log(' Attempting to log logout without user session...');
+        try {
+          const { error } = await supabase
+            .from('activity_logs')
+            .insert([{
+              user_id: 'unknown',
+              user_email: data.metadata.user_email || 'unknown',
+              user_role: 'user',
+              activity_type: data.activity_type,
+              activity_description: data.activity_description,
+              page_url: data.page_url || window.location.pathname,
+              page_name: data.page_name || 'Logout',
+              metadata: data.metadata || {},
+              created_at: new Date().toISOString()
+            }]);
+          
+          if (!error) {
+            console.log('Logout activity logged directly!');
+            return;
+          } else {
+            console.error(' Failed to log logout directly:', error);
+          }
+        } catch (err) {
+          console.error(' Error logging logout directly:', err);
+        }
+      }
       return;
     }
 
@@ -97,7 +154,7 @@ export class ActivityLogger {
       page_name: data.page_name || document.title || 'Unknown Page',
     });
 
-    console.log(`Logging activity: ${data.activity_type} - ${data.activity_description}`);
+    console.log(` Logging activity: ${data.activity_type} - ${data.activity_description}`);
 
     if (this.queue.length >= 5) {
       await this.processBatch();
@@ -152,7 +209,7 @@ export class ActivityLogger {
           console.error('Error logging activities:', error);
           this.saveToLocalStorage(logs);
         } else {
-          console.log(`Logged ${logs.length} activities`);
+          console.log(` Logged ${logs.length} activities`);
         }
       }
     } catch (error) {
@@ -191,6 +248,7 @@ export class ActivityLogger {
 
       if (!error) {
         localStorage.removeItem('pending_activity_logs');
+        console.log(`Processed ${pending.length} pending logs from localStorage`);
       }
     } catch (error) {
       console.error('Error processing pending logs:', error);
@@ -249,7 +307,7 @@ export const useActivityLogger = () => {
     return () => {
       logger.cleanup();
     };
-  }, [location.pathname]);
+  }, [location.pathname, logger]);
 };
 
 export const logActivity = async (
@@ -270,7 +328,37 @@ export const logLogin = async (email: string) => {
 };
 
 export const logLogout = async (email: string) => {
-  await logActivity('logout', `User ${email} logged out`, { user_email: email });
+  console.log(` logLogout called for: ${email}`);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    console.warn(' No user found when logging logout, using email from parameter');
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+    
+    if (profileData) {
+      const logger = ActivityLogger.getInstance();
+      await logger.logActivity({
+        activity_type: 'logout',
+        activity_description: `User ${email} logged out`,
+        metadata: { 
+          user_email: email,
+          user_id: profileData.id,
+          logout_time: new Date().toISOString()
+        }
+      });
+      return;
+    }
+  }
+  
+  await logActivity('logout', `User ${email} logged out`, { 
+    user_email: email,
+    logout_time: new Date().toISOString()
+  });
 };
 
 export const logPageView = async (pageName: string, pageUrl: string) => {
