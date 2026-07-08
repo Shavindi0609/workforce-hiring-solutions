@@ -13,6 +13,7 @@ export type ActivityType =
   | 'candidate_create'
   | 'report_generated'
   | 'settings_change'
+  | 'field_change'  
   | 'export_data'
   | 'login'
   | 'logout'

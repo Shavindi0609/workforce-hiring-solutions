@@ -1,4 +1,3 @@
-// src/hooks/useReports.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
@@ -21,28 +20,36 @@ export const useReports = () => {
     const [statusReport, setStatusReport] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error] = useState<string | null>(null);
+    const [filteredData, setFilteredData] = useState<any[]>([]);
+    
+    const [filteredSalaryInsights, setFilteredSalaryInsights] = useState<SalaryInsight[]>([]);
+    const [filteredFieldDistribution, setFilteredFieldDistribution] = useState<any[]>([]);
+    const [filteredStatusReport, setFilteredStatusReport] = useState<any[]>([]);
+    const [filteredSummaryMetrics, setFilteredSummaryMetrics] = useState<SummaryMetrics>({
+        totalCandidates: 0,
+        activelyLooking: 0,
+        openToOpportunities: 0,
+        availableImmediate: 0,
+        avgMinSalary: 0,
+        avgMaxSalary: 0
+    });
+    const [currentFilters, setCurrentFilters] = useState<any>(null);
+    const [isFiltered, setIsFiltered] = useState(false);
 
-    // Helper function to parse salary range
     const parseSalaryRange = (salaryRange: string): { min: number; max: number } => {
         if (!salaryRange) return { min: 0, max: 0 };
         
-        // Remove any spaces and replace multiple dots
         let cleaned = salaryRange.replace(/\s/g, '');
-        
-        // Split by '-' or '–' or '—'
         let parts = cleaned.split(/[-–—]/);
         
         if (parts.length === 2) {
-            // Parse min and max
             let min = parseFloat(parts[0].replace(/[^0-9.]/g, ''));
             let max = parseFloat(parts[1].replace(/[^0-9.]/g, ''));
             
-            // If min is greater than max, swap them
             if (min > max) {
                 [min, max] = [max, min];
             }
             
-            // Handle case where min might be 0 or invalid
             if (isNaN(min)) min = 0;
             if (isNaN(max)) max = 0;
             
@@ -52,20 +59,166 @@ export const useReports = () => {
         return { min: 0, max: 0 };
     };
 
-    // Helper function to format currency
     const formatCurrency = (value: number): string => {
         if (!value || isNaN(value) || value === 0) return '0';
         const rounded = Math.round(value);
         return rounded.toLocaleString('en-IN');
     };
 
-    // Helper function to format number
     const formatNumber = (value: number): string => {
         if (!value || isNaN(value)) return '0';
         return value.toLocaleString('en-IN');
     };
 
-    // Fetch summary metrics from database
+    const fetchFilteredData = useCallback(async (filters: any) => {
+        try {
+            setLoading(true);
+            setCurrentFilters(filters);
+            
+            console.log(' Fetching filtered data with filters:', filters);
+            
+            let query = supabase
+                .from('candidates')
+                .select('*');
+
+            if (filters.fromDate) {
+                query = query.gte('created_at', filters.fromDate);
+            }
+            if (filters.toDate) {
+                query = query.lte('created_at', `${filters.toDate}T23:59:59`);
+            }
+            if (filters.field && filters.field !== 'All Fields') {
+                query = query.eq('interested_field', filters.field);
+            }
+            if (filters.status && filters.status !== 'All Status') {
+                query = query.eq('status', filters.status);
+            }
+            if (filters.availability && filters.availability !== 'All Availability') {
+                query = query.eq('availability', filters.availability);
+            }
+
+            const { data, error: fetchError } = await query;
+            if (fetchError) throw fetchError;
+
+            console.log(' Filtered data result:', { 
+                dataLength: data?.length,
+                fields: data?.map(c => c.interested_field)
+            });
+
+            setFilteredData(data || []);
+            
+            const hasFilters = (filters.field && filters.field !== 'All Fields') ||
+                              (filters.status && filters.status !== 'All Status') ||
+                              (filters.availability && filters.availability !== 'All Availability') ||
+                              filters.fromDate || filters.toDate;
+            setIsFiltered(hasFilters);
+
+            const total = data?.length || 0;
+            const activelyLooking = data?.filter(c => c.status === 'Actively Looking').length || 0;
+            const openOpportunities = data?.filter(c => c.status === 'Open to Opportunities').length || 0;
+            const availableImmediate = data?.filter(c => c.availability === 'Immediate').length || 0;
+            
+            let totalMin = 0, totalMax = 0, count = 0;
+            data?.forEach(c => {
+                if (c.salary_range) {
+                    const { min, max } = parseSalaryRange(c.salary_range);
+                    if (min > 0 && max > 0 && min <= max) {
+                        totalMin += min;
+                        totalMax += max;
+                        count++;
+                    }
+                }
+            });
+            
+            const newSummaryMetrics = {
+                totalCandidates: total,
+                activelyLooking,
+                openToOpportunities: openOpportunities,
+                availableImmediate,
+                avgMinSalary: count > 0 ? totalMin / count : 0,
+                avgMaxSalary: count > 0 ? totalMax / count : 0
+            };
+            
+            setFilteredSummaryMetrics(newSummaryMetrics);
+            setSummaryMetrics(newSummaryMetrics);
+
+            const fieldMap = new Map();
+            data?.forEach(c => {
+                const field = c.interested_field;
+                if (field) {
+                    fieldMap.set(field, (fieldMap.get(field) || 0) + 1);
+                }
+            });
+            
+            const distribution = Array.from(fieldMap.entries())
+                .map(([field, count]) => ({ field, count }))
+                .sort((a, b) => b.count - a.count);
+            
+            setFilteredFieldDistribution(distribution);
+            setFieldDistribution(distribution);
+
+            const totalFiltered = data?.length || 0;
+            const statusMap = new Map();
+            data?.forEach(c => {
+                const status = c.status;
+                if (status) {
+                    statusMap.set(status, (statusMap.get(status) || 0) + 1);
+                }
+            });
+            
+            const report = Array.from(statusMap.entries()).map(([status, count]) => ({
+                status,
+                count,
+                percentage: totalFiltered > 0 ? (count / totalFiltered) * 100 : 0
+            }));
+            
+            setFilteredStatusReport(report);
+            setStatusReport(report);
+
+            const salaryFieldMap = new Map();
+            data?.forEach(c => {
+                const field = c.interested_field;
+                if (!field) return;
+                
+                if (!salaryFieldMap.has(field)) {
+                    salaryFieldMap.set(field, { totalMin: 0, totalMax: 0, count: 0 });
+                }
+                
+                const { min, max } = parseSalaryRange(c.salary_range);
+                if (min > 0 && max > 0 && min <= max) {
+                    const existing = salaryFieldMap.get(field);
+                    existing.totalMin += min;
+                    existing.totalMax += max;
+                    existing.count++;
+                    salaryFieldMap.set(field, existing);
+                }
+            });
+            
+            const insights = Array.from(salaryFieldMap.entries())
+                .map(([field, data]) => ({
+                    field,
+                    avgMinSalary: data.count > 0 ? data.totalMin / data.count : 0,
+                    avgMaxSalary: data.count > 0 ? data.totalMax / data.count : 0,
+                    candidateCount: data.count
+                }))
+                .filter(insight => insight.candidateCount > 0)
+                .sort((a, b) => b.avgMaxSalary - a.avgMaxSalary);
+            
+            console.log(' Filtered salary insights:', insights);
+            
+            setFilteredSalaryInsights(insights);
+            setSalaryInsights(insights);
+
+            return data;
+        } catch (err: any) {
+            console.error(' Error fetching filtered data:', err);
+            toast.error('Failed to fetch filtered data');
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     const fetchSummaryMetrics = useCallback(async () => {
         try {
             const { data, error: fetchError } = await supabase
@@ -79,7 +232,6 @@ export const useReports = () => {
             const openOpportunities = data?.filter(c => c.status === 'Open to Opportunities').length || 0;
             const availableImmediate = data?.filter(c => c.availability === 'Immediate').length || 0;
             
-            // Calculate average salaries with better parsing
             let totalMin = 0, totalMax = 0, count = 0;
             data?.forEach(c => {
                 if (c.salary_range) {
@@ -92,20 +244,21 @@ export const useReports = () => {
                 }
             });
             
-            setSummaryMetrics({
+            const newMetrics = {
                 totalCandidates: total,
                 activelyLooking,
                 openToOpportunities: openOpportunities,
                 availableImmediate,
                 avgMinSalary: count > 0 ? totalMin / count : 0,
                 avgMaxSalary: count > 0 ? totalMax / count : 0
-            });
+            };
+            setSummaryMetrics(newMetrics);
+            setFilteredSummaryMetrics(newMetrics);
         } catch (err: any) {
             console.error('Error fetching summary metrics:', err);
         }
     }, []);
 
-    // Fetch salary insights by field
     const fetchSalaryInsights = useCallback(async () => {
         try {
             const { data, error: fetchError } = await supabase
@@ -144,12 +297,12 @@ export const useReports = () => {
                 .sort((a, b) => b.avgMaxSalary - a.avgMaxSalary);
             
             setSalaryInsights(insights);
+            setFilteredSalaryInsights(insights);
         } catch (err: any) {
             console.error('Error fetching salary insights:', err);
         }
     }, []);
 
-    // Fetch field distribution
     const fetchFieldDistribution = useCallback(async () => {
         try {
             const { data, error: fetchError } = await supabase
@@ -170,12 +323,12 @@ export const useReports = () => {
                 .sort((a, b) => b.count - a.count);
             
             setFieldDistribution(distribution);
+            setFilteredFieldDistribution(distribution);
         } catch (err: any) {
             console.error('Error fetching field distribution:', err);
         }
     }, []);
 
-    // Fetch status report
     const fetchStatusReport = useCallback(async () => {
         try {
             const { data, error: fetchError } = await supabase
@@ -199,12 +352,12 @@ export const useReports = () => {
             }));
             
             setStatusReport(report);
+            setFilteredStatusReport(report);
         } catch (err: any) {
             console.error('Error fetching status report:', err);
         }
     }, []);
 
-    // Fetch generated reports history
     const fetchGeneratedReports = useCallback(async () => {
         try {
             const { data, error: fetchError } = await supabase
@@ -236,15 +389,13 @@ export const useReports = () => {
         }
     }, []);
 
-    // Generate PDF Report
-    const generatePDFReport = (reportName: string) => {
+    const generatePDFReport = useCallback((reportName: string) => {
         const doc = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: 'a4'
         });
         
-        // Add header
         doc.setFontSize(20);
         doc.setTextColor(37, 99, 235);
         doc.text(reportName, 14, 20);
@@ -254,17 +405,53 @@ export const useReports = () => {
         doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
         doc.text(`Generated by: Admin`, 14, 36);
         
-        let startY = 50;
+        let filterY = 42;
+        if (currentFilters) {
+            doc.setFontSize(8);
+            doc.setTextColor(80, 80, 80);
+            const filterParts = [];
+            if (currentFilters.field && currentFilters.field !== 'All Fields') filterParts.push(`Field: ${currentFilters.field}`);
+            if (currentFilters.status && currentFilters.status !== 'All Status') filterParts.push(`Status: ${currentFilters.status}`);
+            if (currentFilters.availability && currentFilters.availability !== 'All Availability') filterParts.push(`Availability: ${currentFilters.availability}`);
+            if (currentFilters.fromDate) filterParts.push(`From: ${currentFilters.fromDate}`);
+            if (currentFilters.toDate) filterParts.push(`To: ${currentFilters.toDate}`);
+            
+            if (filterParts.length > 0) {
+                doc.text(`Filters: ${filterParts.join(' | ')}`, 14, filterY);
+                filterY += 8;
+            }
+        }
+        
+        let startY = filterY + 4;
+        
+        const useSalaryInsights = isFiltered && filteredSalaryInsights.length > 0 
+            ? filteredSalaryInsights 
+            : salaryInsights;
+        const useFieldDistribution = isFiltered && filteredFieldDistribution.length > 0 
+            ? filteredFieldDistribution 
+            : fieldDistribution;
+        const useStatusReport = isFiltered && filteredStatusReport.length > 0 
+            ? filteredStatusReport 
+            : statusReport;
+        const useSummaryMetrics = isFiltered && filteredSummaryMetrics.totalCandidates > 0 
+            ? filteredSummaryMetrics 
+            : summaryMetrics;
+
+        console.log(' Generating report with data:', {
+            isFiltered,
+            useSalaryInsights: useSalaryInsights.length,
+            useSalaryInsightsData: useSalaryInsights.map(i => i.field)
+        });
         
         switch (reportName) {
             case 'Candidate Summary':
                 const summaryData = [
-                    ['Total Candidates', formatNumber(summaryMetrics.totalCandidates)],
-                    ['Actively Looking', formatNumber(summaryMetrics.activelyLooking)],
-                    ['Open to Opportunities', formatNumber(summaryMetrics.openToOpportunities)],
-                    ['Available Immediately', formatNumber(summaryMetrics.availableImmediate)],
-                    ['Average Minimum Salary', `Rs. ${formatCurrency(summaryMetrics.avgMinSalary)}`],
-                    ['Average Maximum Salary', `Rs. ${formatCurrency(summaryMetrics.avgMaxSalary)}`]
+                    ['Total Candidates', formatNumber(useSummaryMetrics.totalCandidates)],
+                    ['Actively Looking', formatNumber(useSummaryMetrics.activelyLooking)],
+                    ['Open to Opportunities', formatNumber(useSummaryMetrics.openToOpportunities)],
+                    ['Available Immediately', formatNumber(useSummaryMetrics.availableImmediate)],
+                    ['Average Minimum Salary', `Rs. ${formatCurrency(useSummaryMetrics.avgMinSalary)}`],
+                    ['Average Maximum Salary', `Rs. ${formatCurrency(useSummaryMetrics.avgMaxSalary)}`]
                 ];
                 
                 autoTable(doc, {
@@ -282,10 +469,10 @@ export const useReports = () => {
                 break;
                 
             case 'Salary Insights':
-                if (salaryInsights.length === 0) {
-                    doc.text('No salary data available', 14, startY);
+                if (useSalaryInsights.length === 0) {
+                    doc.text('No salary data available for the selected filters', 14, startY);
                 } else {
-                    const salaryTableData = salaryInsights.map(insight => [
+                    const salaryTableData = useSalaryInsights.map(insight => [
                         insight.field,
                         `Rs. ${formatCurrency(insight.avgMinSalary)}`,
                         `Rs. ${formatCurrency(insight.avgMaxSalary)}`,
@@ -310,10 +497,10 @@ export const useReports = () => {
                 break;
                 
             case 'Field Distribution':
-                if (fieldDistribution.length === 0) {
-                    doc.text('No field data available', 14, startY);
+                if (useFieldDistribution.length === 0) {
+                    doc.text('No field data available for the selected filters', 14, startY);
                 } else {
-                    const fieldData = fieldDistribution.map(f => [f.field, formatNumber(f.count)]);
+                    const fieldData = useFieldDistribution.map(f => [f.field, formatNumber(f.count)]);
                     
                     autoTable(doc, {
                         head: [['Field', 'Candidate Count']],
@@ -331,10 +518,10 @@ export const useReports = () => {
                 break;
                 
             case 'Status Report':
-                if (statusReport.length === 0) {
-                    doc.text('No status data available', 14, startY);
+                if (useStatusReport.length === 0) {
+                    doc.text('No status data available for the selected filters', 14, startY);
                 } else {
-                    const statusData = statusReport.map(s => [s.status, formatNumber(s.count), `${s.percentage.toFixed(1)}%`]);
+                    const statusData = useStatusReport.map(s => [s.status, formatNumber(s.count), `${s.percentage.toFixed(1)}%`]);
                     
                     autoTable(doc, {
                         head: [['Status', 'Count', 'Percentage']],
@@ -353,7 +540,6 @@ export const useReports = () => {
                 break;
         }
         
-        // Add footer
         const pageCount = doc.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
@@ -367,14 +553,25 @@ export const useReports = () => {
             );
         }
         
-        // Save PDF
         const fileName = `${reportName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}_${new Date().toISOString().split('T')[0]}.pdf`;
         doc.save(fileName);
         toast.success(`${reportName} PDF downloaded successfully`);
-    };
+    }, [salaryInsights, fieldDistribution, statusReport, summaryMetrics, filteredSalaryInsights, filteredFieldDistribution, filteredStatusReport, filteredSummaryMetrics, currentFilters, isFiltered]);
     
-    // Generate Excel Report
-    const generateExcelReport = (reportName: string) => {
+    const generateExcelReport = useCallback((reportName: string) => {
+        const useSalaryInsights = isFiltered && filteredSalaryInsights.length > 0 
+            ? filteredSalaryInsights 
+            : salaryInsights;
+        const useFieldDistribution = isFiltered && filteredFieldDistribution.length > 0 
+            ? filteredFieldDistribution 
+            : fieldDistribution;
+        const useStatusReport = isFiltered && filteredStatusReport.length > 0 
+            ? filteredStatusReport 
+            : statusReport;
+        const useSummaryMetrics = isFiltered && filteredSummaryMetrics.totalCandidates > 0 
+            ? filteredSummaryMetrics 
+            : summaryMetrics;
+        
         let rows: any[][] = [];
         let headers: string[] = [];
         
@@ -382,19 +579,19 @@ export const useReports = () => {
             case 'Candidate Summary':
                 headers = ['Metric', 'Value'];
                 rows = [
-                    ['Total Candidates', formatNumber(summaryMetrics.totalCandidates)],
-                    ['Actively Looking', formatNumber(summaryMetrics.activelyLooking)],
-                    ['Open to Opportunities', formatNumber(summaryMetrics.openToOpportunities)],
-                    ['Available Immediately', formatNumber(summaryMetrics.availableImmediate)],
-                    ['Average Minimum Salary', `Rs. ${formatCurrency(summaryMetrics.avgMinSalary)}`],
-                    ['Average Maximum Salary', `Rs. ${formatCurrency(summaryMetrics.avgMaxSalary)}`],
+                    ['Total Candidates', formatNumber(useSummaryMetrics.totalCandidates)],
+                    ['Actively Looking', formatNumber(useSummaryMetrics.activelyLooking)],
+                    ['Open to Opportunities', formatNumber(useSummaryMetrics.openToOpportunities)],
+                    ['Available Immediately', formatNumber(useSummaryMetrics.availableImmediate)],
+                    ['Average Minimum Salary', `Rs. ${formatCurrency(useSummaryMetrics.avgMinSalary)}`],
+                    ['Average Maximum Salary', `Rs. ${formatCurrency(useSummaryMetrics.avgMaxSalary)}`],
                     ['Generated On', new Date().toLocaleString()]
                 ];
                 break;
                 
             case 'Salary Insights':
                 headers = ['Field', 'Avg Min Salary', 'Avg Max Salary', 'Candidate Count'];
-                rows = salaryInsights.map(insight => [
+                rows = useSalaryInsights.map(insight => [
                     insight.field,
                     `Rs. ${formatCurrency(insight.avgMinSalary)}`,
                     `Rs. ${formatCurrency(insight.avgMaxSalary)}`,
@@ -404,16 +601,15 @@ export const useReports = () => {
                 
             case 'Field Distribution':
                 headers = ['Field', 'Candidate Count'];
-                rows = fieldDistribution.map(f => [f.field, formatNumber(f.count)]);
+                rows = useFieldDistribution.map(f => [f.field, formatNumber(f.count)]);
                 break;
                 
             case 'Status Report':
                 headers = ['Status', 'Count', 'Percentage'];
-                rows = statusReport.map(s => [s.status, formatNumber(s.count), `${s.percentage.toFixed(1)}%`]);
+                rows = useStatusReport.map(s => [s.status, formatNumber(s.count), `${s.percentage.toFixed(1)}%`]);
                 break;
         }
         
-        // Create CSV content
         const csvContent = [
             headers.join(','),
             ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
@@ -429,9 +625,8 @@ export const useReports = () => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
         toast.success(`${reportName} Excel report downloaded successfully`);
-    };
+    }, [salaryInsights, fieldDistribution, statusReport, summaryMetrics, filteredSalaryInsights, filteredFieldDistribution, filteredStatusReport, filteredSummaryMetrics, isFiltered]);
 
-    // Log report generation
     const logReportGeneration = useCallback(async (reportName: string, format: ReportFormat, filters?: any) => {
         try {
             const { error: insertError } = await supabase
@@ -451,34 +646,42 @@ export const useReports = () => {
         }
     }, [fetchGeneratedReports]);
 
-    // Generate report data
     const generateReportData = useCallback(async (reportName: string, format: ReportFormat, filters?: any) => {
         try {
-            // Refresh data before generating report
-            await Promise.all([
-                fetchSummaryMetrics(),
-                fetchSalaryInsights(),
-                fetchFieldDistribution(),
-                fetchStatusReport()
-            ]);
-            
             await logReportGeneration(reportName, format, filters);
             toast.success(`${reportName} report generated successfully`);
-            
         } catch (err: any) {
             toast.error('Failed to generate report');
             throw err;
         }
-    }, [fetchSummaryMetrics, fetchSalaryInsights, fetchFieldDistribution, fetchStatusReport, logReportGeneration]);
+    }, [logReportGeneration]);
 
-    // Download report
     const downloadReport = useCallback((reportName: string, format: ReportFormat) => {
         if (format === 'PDF') {
             generatePDFReport(reportName);
         } else {
             generateExcelReport(reportName);
         }
-    }, [summaryMetrics, salaryInsights, fieldDistribution, statusReport]);
+    }, [generatePDFReport, generateExcelReport]);
+
+    const resetFilters = useCallback(() => {
+        setIsFiltered(false);
+        setCurrentFilters(null);
+        fetchSummaryMetrics();
+        fetchSalaryInsights();
+        fetchFieldDistribution();
+        fetchStatusReport();
+    }, [fetchSummaryMetrics, fetchSalaryInsights, fetchFieldDistribution, fetchStatusReport]);
+
+    const refetch = useCallback(() => {
+        setIsFiltered(false);
+        setCurrentFilters(null);
+        fetchSummaryMetrics();
+        fetchSalaryInsights();
+        fetchFieldDistribution();
+        fetchStatusReport();
+        fetchGeneratedReports();
+    }, [fetchSummaryMetrics, fetchSalaryInsights, fetchFieldDistribution, fetchStatusReport, fetchGeneratedReports]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -500,16 +703,15 @@ export const useReports = () => {
         generatedReports,
         summaryMetrics,
         salaryInsights,
+        fieldDistribution,
+        statusReport,
         loading,
         error,
         generateReportData,
         downloadReport,
-        refetch: () => {
-            fetchSummaryMetrics();
-            fetchSalaryInsights();
-            fetchFieldDistribution();
-            fetchStatusReport();
-            fetchGeneratedReports();
-        }
+        fetchFilteredData,
+        resetFilters,
+        isFiltered,
+        refetch
     };
 };

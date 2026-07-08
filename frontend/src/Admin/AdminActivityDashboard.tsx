@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient';
 import { 
   Users, Download, Eye, Calendar, Activity as ActivityIcon, TrendingUp, 
   FileText, UserCheck, Clock, Filter, Search, ChevronDown,
-  BarChart, RefreshCw, Download as DownloadIcon, X, Trash2
+  BarChart, RefreshCw, Download as DownloadIcon, X, Trash2, Edit3, Plus, Tag
 } from 'lucide-react';
 
 const formatDate = (date: Date | string): string => {
@@ -199,7 +199,7 @@ export default function AdminActivityDashboard() {
       });
       setUserCache(cache);
       
-      console.log(' Fetched users:', uniqueUsers.length, uniqueUsers);
+      console.log('Fetched users:', uniqueUsers.length, uniqueUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -231,7 +231,6 @@ export default function AdminActivityDashboard() {
 
       if (detailError) throw detailError;
       
-      // If no activities found, set empty arrays
       if (!detailData || detailData.length === 0) {
         setActivities([]);
         setDailySummaries([]);
@@ -471,9 +470,9 @@ export default function AdminActivityDashboard() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm('⚠️ WARNING: Are you sure you want to delete ALL activity logs? This action cannot be undone!')) return;
+    if (!window.confirm(' WARNING: Are you sure you want to delete ALL activity logs? This action cannot be undone!')) return;
     
-    if (!window.confirm('⚠️ FINAL WARNING: This will permanently delete ALL activity logs. Are you absolutely sure?')) return;
+    if (!window.confirm(' FINAL WARNING: This will permanently delete ALL activity logs. Are you absolutely sure?')) return;
     
     setDeleting(true);
     try {
@@ -603,6 +602,7 @@ export default function AdminActivityDashboard() {
       candidate_create: 'bg-violet-100 text-violet-700',
       report_generated: 'bg-orange-100 text-orange-700',
       settings_change: 'bg-red-100 text-red-700',
+      field_change: 'bg-indigo-100 text-indigo-700',
       export_data: 'bg-cyan-100 text-cyan-700',
       login: 'bg-teal-100 text-teal-700',
       logout: 'bg-rose-100 text-rose-700',
@@ -624,6 +624,7 @@ export default function AdminActivityDashboard() {
       candidate_create: <UserCheck size={16} />,
       report_generated: <BarChart size={16} />,
       settings_change: <ActivityIcon size={16} />,
+      field_change: <Tag size={16} />,
       export_data: <DownloadIcon size={16} />,
       login: <UserCheck size={16} />,
       logout: <UserCheck size={16} />,
@@ -705,6 +706,7 @@ export default function AdminActivityDashboard() {
     );
   }, [activities, searchTerm]);
 
+  // Activity types filter - ADDED field_change
   const activityTypes = [
     'all',
     'cv_download',
@@ -717,6 +719,7 @@ export default function AdminActivityDashboard() {
     'candidate_create',
     'report_generated',
     'settings_change',
+    'field_change',
     'export_data',
     'login',
     'logout',
@@ -961,6 +964,22 @@ export default function AdminActivityDashboard() {
                                   Candidate: {activity.metadata.candidate_name}
                                 </p>
                               )}
+                              {/* Display field changes */}
+                              {activity.activity_type === 'field_change' && activity.metadata?.changes && (
+                                <div className="mt-1">
+                                  {activity.metadata.changes.map((change: string, idx: number) => (
+                                    <p key={idx} className="text-xs text-indigo-600">
+                                      • {change}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Display settings changes */}
+                              {activity.activity_type === 'settings_change' && activity.metadata?.setting && (
+                                <p className="text-xs text-red-600 mt-0.5">
+                                  • {activity.metadata.setting}: {activity.metadata.old_value} → {activity.metadata.new_value}
+                                </p>
+                              )}
                             </div>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${getActivityTypeColor(activity.activity_type)}`}>
                               {activity.activity_type.replace('_', ' ')}
@@ -1012,6 +1031,20 @@ export default function AdminActivityDashboard() {
                     <p className="text-sm text-gray-700">{activity.activity_description}</p>
                     {activity.metadata?.candidate_name && (
                       <p className="text-xs text-gray-400">Candidate: {activity.metadata.candidate_name}</p>
+                    )}
+                    {activity.activity_type === 'field_change' && activity.metadata?.changes && (
+                      <div className="mt-1">
+                        {activity.metadata.changes.map((change: string, idx: number) => (
+                          <p key={idx} className="text-xs text-indigo-600">
+                            • {change}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {activity.activity_type === 'settings_change' && activity.metadata?.setting && (
+                      <p className="text-xs text-red-600 mt-0.5">
+                        • {activity.metadata.setting}: {activity.metadata.old_value} → {activity.metadata.new_value}
+                      </p>
                     )}
                   </td>
                   <td className="px-4 py-3">

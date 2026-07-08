@@ -1,8 +1,8 @@
-// src/hooks/useFields.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
 import type { Field, CreateFieldDto, UpdateFieldDto, FieldStatistics } from '../types/field';
+import { logActivity } from '../utils/activityLogger';
 
 export const useFields = () => {
     const [fields, setFields] = useState<Field[]>([]);
@@ -15,7 +15,7 @@ export const useFields = () => {
             setLoading(true);
             setError(null);
             
-            console.log('🔍 Fetching fields from Supabase...');
+            console.log(' Fetching fields from Supabase...');
             
             let query = supabase
                 .from('fields')
@@ -29,7 +29,7 @@ export const useFields = () => {
 
             const { data, error: fetchError, count } = await query;
 
-            console.log('📊 Fetch result:', { dataLength: data?.length, count, error: fetchError });
+            console.log('Fetch result:', { dataLength: data?.length, count, error: fetchError });
 
             if (fetchError) throw fetchError;
             
@@ -37,7 +37,7 @@ export const useFields = () => {
             setTotalCount(count || 0);
             
         } catch (err: any) {
-            console.error('❌ Fetch error:', err);
+            console.error(' Fetch error:', err);
             setError(err.message);
             toast.error('Failed to fetch fields: ' + err.message);
         } finally {
@@ -58,6 +58,13 @@ export const useFields = () => {
 
             if (error) throw error;
 
+            await logActivity('field_change', `Created new field: ${fieldData.name}`, {
+                field_name: fieldData.name,
+                field_description: fieldData.description,
+                status: fieldData.status || 'Active',
+                action: 'create'
+            });
+
             toast.success('Field added successfully');
             await fetchFields();
             return data;
@@ -70,6 +77,8 @@ export const useFields = () => {
 
     const updateField = async (id: string, updates: UpdateFieldDto) => {
         try {
+            const oldField = fields.find(f => f.id === id);
+            
             const { data, error } = await supabase
                 .from('fields')
                 .update({
@@ -81,6 +90,32 @@ export const useFields = () => {
                 .single();
 
             if (error) throw error;
+
+            if (oldField) {
+                const changes: string[] = [];
+                
+                if (oldField.name !== updates.name && updates.name) {
+                    changes.push(`name: "${oldField.name}" → "${updates.name}"`);
+                }
+                if (oldField.description !== updates.description && updates.description !== undefined) {
+                    changes.push(`description: "${oldField.description}" → "${updates.description}"`);
+                }
+                if (oldField.status !== updates.status && updates.status) {
+                    changes.push(`status: "${oldField.status}" → "${updates.status}"`);
+                }
+                
+                if (changes.length > 0) {
+                    await logActivity('field_change', `Updated field: ${updates.name || oldField.name}`, {
+                        field_name: updates.name || oldField.name,
+                        field_id: id,
+                        changes: changes,
+                        changed_fields: changes.map(c => c.split(':')[0].trim()),
+                        action: 'update'
+                    });
+                } else {
+                    console.log(' No changes detected for field update');
+                }
+            }
 
             toast.success('Field updated successfully');
             await fetchFields();
@@ -94,12 +129,22 @@ export const useFields = () => {
 
     const deleteField = async (id: string) => {
         try {
+            const fieldToDelete = fields.find(f => f.id === id);
+            
             const { error } = await supabase
                 .from('fields')
                 .delete()
                 .eq('id', id);
 
             if (error) throw error;
+
+            if (fieldToDelete) {
+                await logActivity('field_change', `Deleted field: ${fieldToDelete.name}`, {
+                    field_name: fieldToDelete.name,
+                    field_id: id,
+                    action: 'delete'
+                });
+            }
 
             toast.success('Field deleted successfully');
             await fetchFields();

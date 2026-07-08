@@ -1,4 +1,3 @@
-// src/Candidate/Settings.tsx
 import React, { useState } from 'react';
 import { 
   IoSettingsOutline,
@@ -131,7 +130,7 @@ const FormSelect: React.FC<FormSelectProps> = ({ value, options, onChange }) => 
 
 const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('general');
-  const { settings, loading, saving, updateSettings} = useSettings();
+  const { settings, loading, saving, updateSettings } = useSettings();
   const [saveMessage, setSaveMessage] = useState('');
   const [localSettings, setLocalSettings] = useState({
     companyName: '',
@@ -143,17 +142,16 @@ const SettingsPage: React.FC = () => {
     itemsPerPage: 10
   });
 
-  // Update local settings when settings from DB load
   React.useEffect(() => {
     if (settings) {
       setLocalSettings({
-        companyName: settings.company_name,
-        companyEmail: settings.company_email,
-        companyPhone: settings.company_phone,
-        timeZone: settings.time_zone,
-        dateFormat: settings.date_format,
-        currency: settings.currency,
-        itemsPerPage: settings.items_per_page
+        companyName: settings.company_name || '',
+        companyEmail: settings.company_email || '',
+        companyPhone: settings.company_phone || '',
+        timeZone: settings.time_zone || '',
+        dateFormat: settings.date_format || '',
+        currency: settings.currency || '',
+        itemsPerPage: settings.items_per_page || 10
       });
     }
   }, [settings]);
@@ -164,7 +162,7 @@ const SettingsPage: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      await updateSettings({
+      const newSettings = {
         company_name: localSettings.companyName,
         company_email: localSettings.companyEmail,
         company_phone: localSettings.companyPhone,
@@ -172,7 +170,10 @@ const SettingsPage: React.FC = () => {
         date_format: localSettings.dateFormat,
         currency: localSettings.currency,
         items_per_page: localSettings.itemsPerPage
-      });
+      };
+
+      await updateSettings(newSettings);
+      
       setSaveMessage('Settings saved successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {

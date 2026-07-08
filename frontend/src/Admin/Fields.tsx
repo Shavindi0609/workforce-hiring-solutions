@@ -206,7 +206,6 @@ export default function Fields() {
                     <div className="flex gap-2">
                         <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors disabled:opacity-50 text-xs sm:text-sm" disabled>Previous</button>
                         <button className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs sm:text-sm">1</button>
-                        <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors text-xs sm:text-sm">2</button>
                         <button className="px-3 py-1 border rounded-md hover:bg-white transition-colors text-xs sm:text-sm">Next</button>
                     </div>
                 </div>

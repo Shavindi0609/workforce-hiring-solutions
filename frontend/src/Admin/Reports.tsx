@@ -8,6 +8,8 @@ import {
   Users,
 } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
+import { useCandidates } from '../hooks/useCandidates';
+import { useFields } from '../hooks/useFields';
 import type { ReportFormat } from '../types/report';
 import { logReportGenerated, logExportData } from '../utils/activityLogger';
 import toast from 'react-hot-toast';
@@ -47,8 +49,32 @@ function Reports() {
     loading, 
     generateReportData, 
     downloadReport,
-    refetch 
+    refetch,
+    fetchFilteredData
   } = useReports();
+
+  const { fields, fetchFields, loading: fieldsLoading } = useFields();
+  const { candidates, fetchCandidates } = useCandidates();
+
+  const uniqueStatuses = useMemo(() => {
+    const statuses = new Set(candidates.map(c => c.status).filter(Boolean));
+    return ['All Status', ...Array.from(statuses)];
+  }, [candidates]);
+
+  const uniqueAvailabilities = useMemo(() => {
+    const availabilities = new Set(candidates.map(c => c.availability).filter(Boolean));
+    return ['All Availability', ...Array.from(availabilities)];
+  }, [candidates]);
+
+  const uniqueFields = useMemo(() => {
+    const fieldNames = fields.map(f => f.name).filter(Boolean);
+    return ['All Fields', ...fieldNames];
+  }, [fields]);
+
+  useEffect(() => {
+    fetchFields();
+    fetchCandidates();
+  }, []);
 
   useEffect(() => {
     if (fromDate && toDate && toDate < fromDate) {
@@ -78,14 +104,16 @@ function Reports() {
     try {
       await logReportGenerated(reportName, format);
       
+      await fetchFilteredData(filters);
       await generateReportData(reportName, format, filters);
       downloadReport(reportName, format);
     } catch (error) {
       console.error('Download error:', error);
+      toast.error('Failed to download report');
     } finally {
       setIsGenerating(false);
     }
-  }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, downloadReport, isGenerating]);
+  }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, downloadReport, isGenerating, fetchFilteredData]);
 
   const handleGenerateReport = useCallback(async () => {
     if (isGenerating) return;
@@ -104,14 +132,16 @@ function Reports() {
     try {
       await logReportGenerated(selectedReportName, 'PDF');
       
+      await fetchFilteredData(filters);
       await generateReportData(selectedReportName, 'PDF', filters);
-      await refetch();
+      toast.success('Report generated successfully!');
     } catch (error) {
       console.error('Generate error:', error);
+      toast.error('Failed to generate report');
     } finally {
       setIsGenerating(false);
     }
-  }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, refetch, isGenerating]);
+  }, [reportType, fromDate, toDate, fieldFilter, statusFilter, availabilityFilter, generateReportData, isGenerating, fetchFilteredData]);
 
   const handleRecentReportDownload = useCallback(async (reportName: string, format: 'PDF' | 'Excel') => {
     if (isGenerating) return;
@@ -127,6 +157,7 @@ function Reports() {
       }
     } catch (error) {
       console.error('Download error:', error);
+      toast.error('Failed to download report');
     } finally {
       setIsGenerating(false);
     }
@@ -139,7 +170,7 @@ function Reports() {
     { label: 'Available Immediately', value: summaryMetrics.availableImmediate.toLocaleString(), tone: 'purple' },
   ];
 
-  if (loading) {
+  if (loading || fieldsLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -164,19 +195,19 @@ function Reports() {
         <FilterSelect 
           label="Field" 
           value={fieldFilter} 
-          options={['All Fields', 'Web Development', 'UI/UX Design', 'Data Science', 'Digital Marketing', 'Mobile Development', 'DevOps', 'AI / ML']}
+          options={uniqueFields}
           onChange={setFieldFilter}
         />
         <FilterSelect 
           label="Status" 
           value={statusFilter} 
-          options={['All Status', 'Actively Looking', 'Open to Opportunities']}
+          options={uniqueStatuses}
           onChange={setStatusFilter}
         />
         <FilterSelect 
           label="Availability" 
           value={availabilityFilter} 
-          options={['All Availability', 'Immediate', '2 Weeks', '1 Month', '2 Months', '3 Months']}
+          options={uniqueAvailabilities}
           onChange={setAvailabilityFilter}
         />
         <div className="assigned-date-filter" aria-label={dateRangeLabel}>
