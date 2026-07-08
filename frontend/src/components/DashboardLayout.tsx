@@ -1,5 +1,3 @@
-// components/DashboardLayout.tsx - Fixed login deduplication
-
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
@@ -22,7 +20,6 @@ interface Notification {
   data: any;
 }
 
-// Helper functions for localStorage persistence
 const getStorageKey = (userId: string) => `deleted_notifications_${userId}`;
 
 const loadDeletedIds = (userId: string): Set<string> => {
@@ -48,7 +45,6 @@ const saveDeletedIds = (userId: string, ids: Set<string>) => {
 };
 
 export default function DashboardLayout() {
-  // Initialize activity logger
   useActivityLogger();
   const logger = ActivityLogger.getInstance();
 
@@ -68,6 +64,15 @@ export default function DashboardLayout() {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [notificationToDelete, setNotificationToDelete] = useState<string | null>(null);
+
+  const toggleSidebar = () => {
+    if (window.innerWidth < 1024) {
+      setMobileSidebarOpen(!mobileSidebarOpen);
+    } else {
+      setSidebarOpen(!sidebarOpen);
+    }
+  };
+
   const [profileForm, setProfileForm] = useState({
     full_name: '',
     email: '',
@@ -87,33 +92,25 @@ export default function DashboardLayout() {
   const loginLoggedRef = useRef<boolean>(false);
   const lastUserIdRef = useRef<string>('');
   const loginAttemptedRef = useRef<boolean>(false);
+  const logoutLoggedRef = useRef<boolean>(false);
+  const logoutAttemptedRef = useRef<boolean>(false);
 
-  // Log login only ONCE per session - FIXED
   useEffect(() => {
-    // Only log login when:
-    // 1. User exists
-    // 2. UserProfile exists
-    // 3. Login hasn't been logged yet
-    // 4. We haven't attempted to log it yet
     if (user && userProfile && !loginLoggedRef.current && !loginAttemptedRef.current) {
       const userId = user.id;
       
-      // Check session storage to see if this user was already logged
       const sessionKey = `login_logged_${userId}`;
       const alreadyLogged = sessionStorage.getItem(sessionKey) === 'true';
       
       if (alreadyLogged) {
-        // Already logged in this session, just mark as logged
         loginLoggedRef.current = true;
         lastUserIdRef.current = userId;
         loginAttemptedRef.current = true;
         return;
       }
       
-      // Mark as attempted to prevent multiple attempts
       loginAttemptedRef.current = true;
       
-      // Log the login activity
       logger.logActivity({
         activity_type: 'login',
         activity_description: `User ${user.email} logged in`,
@@ -123,28 +120,25 @@ export default function DashboardLayout() {
           login_time: new Date().toISOString()
         }
       }).then(() => {
-        console.log('✅ Login activity logged');
-        // Mark as logged after successful
+        console.log('Login activity logged');
         loginLoggedRef.current = true;
         lastUserIdRef.current = userId;
-        // Store in session storage to prevent duplicate login logs
         sessionStorage.setItem(sessionKey, 'true');
       }).catch((error) => {
-        console.error('❌ Error logging login activity:', error);
-        // Reset so we can retry on next render
+        console.error(' Error logging login activity:', error);
         loginAttemptedRef.current = false;
       });
     }
   }, [user, userProfile, logger]);
 
-  // Reset login flags when user changes
   useEffect(() => {
     if (!user) {
       loginLoggedRef.current = false;
       lastUserIdRef.current = '';
       loginAttemptedRef.current = false;
+      logoutLoggedRef.current = false;
+      logoutAttemptedRef.current = false;
     } else {
-      // Check if we already logged this user in this session
       const sessionKey = `login_logged_${user.id}`;
       const alreadyLogged = sessionStorage.getItem(sessionKey) === 'true';
       
@@ -152,8 +146,21 @@ export default function DashboardLayout() {
         loginLoggedRef.current = true;
         lastUserIdRef.current = user.id;
       } else {
-        // Reset attempt flag so we can try again
         loginAttemptedRef.current = false;
+      }
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      const logoutSessionKey = `logout_logged_${user.id}`;
+      const alreadyLoggedOut = sessionStorage.getItem(logoutSessionKey) === 'true';
+      
+      if (alreadyLoggedOut) {
+        logoutLoggedRef.current = true;
+      } else {
+        logoutLoggedRef.current = false;
+        logoutAttemptedRef.current = false;
       }
     }
   }, [user?.id]);
@@ -341,7 +348,6 @@ export default function DashboardLayout() {
     }
   };
 
-  // Setup real-time subscription
   useEffect(() => {
     if (!user) return;
 
@@ -440,7 +446,6 @@ export default function DashboardLayout() {
     };
   }, [user]);
 
-  // Get user
   useEffect(() => {
     const getUser = async () => {
       try {
@@ -451,7 +456,6 @@ export default function DashboardLayout() {
         if (user) {
           setUser(user);
           
-          // Check if this user was logged in this session
           const sessionKey = `login_logged_${user.id}`;
           const alreadyLogged = sessionStorage.getItem(sessionKey) === 'true';
           if (alreadyLogged) {
@@ -522,10 +526,11 @@ export default function DashboardLayout() {
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        // Reset login logged flag for new session
         loginLoggedRef.current = false;
         lastUserIdRef.current = '';
         loginAttemptedRef.current = false;
+        logoutLoggedRef.current = false;
+        logoutAttemptedRef.current = false;
         
         setUser(session.user);
         
@@ -558,9 +563,12 @@ export default function DashboardLayout() {
         loginLoggedRef.current = false;
         lastUserIdRef.current = '';
         loginAttemptedRef.current = false;
-        // Clear session storage on logout
+        logoutLoggedRef.current = false;
+        logoutAttemptedRef.current = false;
         const sessionKey = `login_logged_${user?.id || ''}`;
         sessionStorage.removeItem(sessionKey);
+        const logoutSessionKey = `logout_logged_${user?.id || ''}`;
+        sessionStorage.removeItem(logoutSessionKey);
       }
     });
     
@@ -604,23 +612,68 @@ export default function DashboardLayout() {
     };
   }, []);
 
-  // FIXED: handleLogout with proper logging
   const handleLogout = async () => {
     try {
-      // Store user info before clearing
       const userEmail = user?.email || 'unknown';
+      const userId = user?.id;
       const userRole = userProfile?.role || 'user';
       
-      // Log logout activity - DO THIS BEFORE signOut
-      console.log('📝 Logging logout activity...');
-      await logLogout(userEmail);
-      console.log('✅ Logout activity logged');
+      console.log('Starting logout process...');
       
-      // Then sign out
+      if (userId) {
+        try {
+          console.log(' Attempting to log logout activity directly...');
+          
+          const { error } = await supabase
+            .from('activity_logs')
+            .insert([{
+              user_id: userId,
+              user_email: userEmail,
+              user_role: userRole,
+              activity_type: 'logout',
+              activity_description: `User ${userEmail} logged out`,
+              page_url: window.location.pathname,
+              page_name: 'Logout',
+              metadata: {
+                user_email: userEmail,
+                user_id: userId,
+                user_role: userRole,
+                logout_time: new Date().toISOString()
+              },
+              created_at: new Date().toISOString()
+            }]);
+          
+          if (error) {
+            console.error(' Direct logout insert failed:', error);
+            await logLogout(userEmail);
+          } else {
+            console.log('Logout activity logged directly to database!');
+          }
+        } catch (err) {
+          console.error('Error in direct logout insert:', err);
+          try {
+            await logLogout(userEmail);
+          } catch (fallbackErr) {
+            console.error(' Fallback logout logging also failed:', fallbackErr);
+          }
+        }
+      } else {
+        console.warn('No userId available, using email only for logout');
+        try {
+          await logLogout(userEmail);
+        } catch (err) {
+          console.error('Logout logging failed:', err);
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log(' Signing out user...');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear all state
+      console.log(' User signed out successfully');
+      
       setNotifications([]);
       setUnreadCount(0);
       deletedIdsRef.current.clear();
@@ -628,26 +681,21 @@ export default function DashboardLayout() {
       loginLoggedRef.current = false;
       lastUserIdRef.current = '';
       loginAttemptedRef.current = false;
-      
-      // Clear session storage on logout
-      const sessionKey = `login_logged_${user?.id || ''}`;
-      sessionStorage.removeItem(sessionKey);
+      logoutAttemptedRef.current = false;
+      if (userId) {
+        const logoutSessionKey = `logout_logged_${userId}`;
+        sessionStorage.setItem(logoutSessionKey, 'true');
+        const loginSessionKey = `login_logged_${userId}`;
+        sessionStorage.removeItem(loginSessionKey);
+      }
       
       navigate('/signin');
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error(' Error logging out:', error);
+      navigate('/signin');
     }
   };
 
-  const toggleSidebar = () => {
-    if (window.innerWidth < 1024) {
-      setMobileSidebarOpen(!mobileSidebarOpen);
-    } else {
-      setSidebarOpen(!sidebarOpen);
-    }
-  };
-
-  // Image handling functions
   const extractFilePath = (url: string) => {
     try {
       const urlObj = new URL(url);
