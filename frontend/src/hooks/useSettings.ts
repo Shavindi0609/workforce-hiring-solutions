@@ -1,8 +1,8 @@
-// src/hooks/useSettings.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
 import type { Settings, UpdateSettingsDto } from '../types/settings';
+import { logSettingsChange } from '../utils/activityLogger';
 
 export const useSettings = () => {
     const [settings, setSettings] = useState<Settings>({
@@ -17,8 +17,8 @@ export const useSettings = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [previousSettings, setPreviousSettings] = useState<Settings | null>(null);
 
-    // Fetch settings from database
     const fetchSettings = useCallback(async () => {
         try {
             setLoading(true);
@@ -30,7 +30,7 @@ export const useSettings = () => {
             if (fetchError) throw fetchError;
             
             if (data && data[0]) {
-                setSettings({
+                const newSettings = {
                     company_name: data[0].company_name || '',
                     company_email: data[0].company_email || '',
                     company_phone: data[0].company_phone || '',
@@ -38,7 +38,9 @@ export const useSettings = () => {
                     date_format: data[0].date_format || '',
                     currency: data[0].currency || '',
                     items_per_page: data[0].items_per_page || 10
-                });
+                };
+                setSettings(newSettings);
+                setPreviousSettings(newSettings);
             }
         } catch (err: any) {
             console.error('Error fetching settings:', err);
@@ -49,11 +51,41 @@ export const useSettings = () => {
         }
     }, []);
 
-    // Update settings
     const updateSettings = useCallback(async (settingsData: UpdateSettingsDto) => {
         try {
             setSaving(true);
             setError(null);
+            
+            if (previousSettings) {
+                const typedSettings = settingsData as Record<string, any>;
+                const typedPrevious = previousSettings as Record<string, any>;
+                
+                let hasChanges = false;
+                const changedFields: string[] = [];
+                
+                Object.keys(typedSettings).forEach((key) => {
+                    const oldValue = typedPrevious[key];
+                    const newValue = typedSettings[key];
+                    
+                    if (oldValue !== newValue) {
+                        hasChanges = true;
+                        const settingName = key.replace(/_/g, ' ').toUpperCase();
+                        changedFields.push(settingName);
+                        logSettingsChange(settingName, oldValue, newValue);
+                        console.log(` Setting changed: ${settingName} = ${oldValue} → ${newValue}`);
+                    }
+                });
+                
+                if (!hasChanges) {
+                    console.log('No settings were changed');
+                    toast('No changes to save', {
+                        icon: 'ℹ️',
+                        duration: 3000,
+                    });
+                    setSaving(false);
+                    return;
+                }
+            }
             
             const { error: updateError } = await supabase
                 .rpc('update_settings', {
@@ -68,8 +100,9 @@ export const useSettings = () => {
             
             if (updateError) throw updateError;
             
-            // Update local state
-            setSettings(settingsData);
+            const newSettings = settingsData as Settings;
+            setSettings(newSettings);
+            setPreviousSettings(newSettings);
             toast.success('Settings saved successfully!');
             
         } catch (err: any) {
@@ -80,7 +113,7 @@ export const useSettings = () => {
         } finally {
             setSaving(false);
         }
-    }, []);
+    }, [previousSettings]);
 
     useEffect(() => {
         fetchSettings();

@@ -8,8 +8,6 @@ import CandidateDetailsModal from '../components/admin/CandidateDetailsModal';
 import toast from 'react-hot-toast';
 import { 
   logCandidateView, 
-  logCandidateCreate, 
-  logCandidateEdit, 
   logCVDownload,
   logExportData 
 } from '../utils/activityLogger';
@@ -106,10 +104,9 @@ export default function CandidatesPage() {
         if (window.confirm('Are you sure you want to delete this candidate?')) {
             try {
                 await deleteCandidate(id);
-                toast.success('Candidate deleted successfully!');
             } catch (error) {
                 console.error('Error deleting candidate:', error);
-                toast.error('Failed to delete candidate');
+                
             }
         }
     }, [deleteCandidate]);
@@ -117,20 +114,13 @@ export default function CandidatesPage() {
     const handleSubmit = useCallback(async (data: CreateCandidateDto | Partial<Candidate>) => {
         try {
             if (selectedCandidate) {
-                const candidateName = data.name || selectedCandidate.name || 'Unknown';
-                await logCandidateEdit(selectedCandidate.id, candidateName);
                 await updateCandidate(selectedCandidate.id, data);
-                toast.success('Candidate updated successfully!');
+                
             } else {
-                const name = data.name || 'Unknown';
-                const email = data.email || '';
-                await logCandidateCreate(name, email);
-                await createCandidate(data as CreateCandidateDto);
-                toast.success('Candidate created successfully!');
+                await createCandidate(data as CreateCandidateDto);      
             }
         } catch (error) {
             console.error('Error saving candidate:', error);
-            toast.error('Failed to save candidate');
         }
     }, [selectedCandidate, updateCandidate, createCandidate]);
 
@@ -387,7 +377,7 @@ export default function CandidatesPage() {
     return (
         <>
             <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-                {/* Header Section - Responsive */}
+                {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold">Candidates</h1>
@@ -450,7 +440,7 @@ export default function CandidatesPage() {
                     </div>
                 </div>
 
-                {/* Stats Cards - Responsive Grid */}
+                {/* Stats Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
                     <StatCard title="Total Candidates" value={stats.total.toLocaleString()} sub="100% of total" />
                     <StatCard title="Actively Looking" value={stats.activelyLooking.toLocaleString()} sub={`${stats.activelyLookingPercentage.toFixed(1)}%`} color="text-green-600" />
@@ -458,10 +448,9 @@ export default function CandidatesPage() {
                     <StatCard title="Available Immediately" value={stats.availableImmediately.toLocaleString()} sub={`${stats.availableImmediatelyPercentage.toFixed(1)}%`} color="text-blue-600" />
                 </div>
 
-                {/* Search and Filters - Responsive */}
+                {/* Search and Filters */}
                 <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 mb-6">
                     <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 sm:gap-4">
-
                         <div className="relative flex-grow">
                             <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                             <input 
@@ -473,21 +462,22 @@ export default function CandidatesPage() {
                             />
                         </div>
                         
-                    <div className="relative flex-grow">
-                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="CV keyword search (e.g. react, node, aws)..." 
-                            className="w-full pl-10 pr-4 py-2 border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={cvKeywords}
-                            onChange={(e) => setCvKeywords(e.target.value)}
-                        />
-                        {cvKeywords && (
-                            <p className="text-xs text-gray-400 mt-1 ml-1">
-                                Matching against name, field, experience, skills
-                            </p>
-                        )}
-                    </div>
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                            <input 
+                                type="text" 
+                                placeholder="CV keyword search (e.g. react, node, aws)..." 
+                                className="w-full pl-10 pr-4 py-2 border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={cvKeywords}
+                                onChange={(e) => setCvKeywords(e.target.value)}
+                            />
+                            {cvKeywords && (
+                                <p className="text-xs text-gray-400 mt-1 ml-1">
+                                    Matching against name, field, experience, skills
+                                </p>
+                            )}
+                        </div>
+                        
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-1 gap-2 sm:gap-3">
                             <select
                                 value={fieldFilter}
@@ -529,7 +519,7 @@ export default function CandidatesPage() {
                     </div>
                 </div>
 
-                {/* Candidates Table - Horizontally scrollable on mobile */}
+                {/* Candidates Table */}
                 <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[800px] lg:min-w-full">
@@ -628,7 +618,6 @@ export default function CandidatesPage() {
                                                     {cvUrl && (
                                                         <button 
                                                             onClick={() => {
-                                                                // Use the properly typed variables
                                                                 handleDownloadCV(candidateId, candidateName, cvUrl);
                                                             }}
                                                             className="p-1.5 sm:p-1 text-green-500 hover:bg-green-50 rounded transition-colors"
@@ -652,7 +641,7 @@ export default function CandidatesPage() {
                         </div>
                     )}
 
-                    {/* Pagination Footer - Responsive */}
+                    {/* Pagination Footer */}
                     <div className="px-4 sm:px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 bg-gray-50">
                         <p className="text-xs sm:text-sm">Showing {filteredCandidates.length} of {candidates.length} candidates</p>
                         <div className="flex gap-2">
@@ -663,7 +652,7 @@ export default function CandidatesPage() {
                     </div>
                 </div>
 
-                {/* Candidate Modal (Add/Edit) */}
+                {/* Candidate Modal */}
                 <CandidateModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
@@ -674,7 +663,7 @@ export default function CandidatesPage() {
                 />
             </div>
 
-            {/* Candidate Details Modal (View) */}
+            {/* Candidate Details Modal */}
             {isDetailsModalOpen && selectedCandidateId && (
                 <CandidateDetailsModal
                     candidateId={selectedCandidateId}

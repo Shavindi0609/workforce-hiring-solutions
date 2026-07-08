@@ -5,6 +5,7 @@ import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { logExportData } from '../utils/activityLogger';
 
 type SelectedFields = {
   'Personal Info': boolean;
@@ -128,6 +129,8 @@ const ExportData: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    logExportData('CSV', exportData.length);
     toast.success('CSV exported successfully');
   };
 
@@ -158,6 +161,8 @@ const ExportData: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    
+    logExportData('Excel', exportData.length);
     toast.success('Excel file exported successfully');
   };
 
@@ -232,6 +237,8 @@ const ExportData: React.FC = () => {
     }
     
     doc.save(`candidates_export_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+    logExportData('PDF', exportData.length);
     toast.success('PDF exported successfully');
   };
 
