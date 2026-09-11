@@ -1,4 +1,3 @@
-// src/hooks/useJobs.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 import toast from 'react-hot-toast';
@@ -19,26 +18,21 @@ export const useJobs = () => {
       setLoading(true);
       setError(null);
       
-      // Build the query
       let query = supabase
         .from('jobs')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
-      // Apply field filter
       if (filterByField && filterByField !== 'All') {
         query = query.eq('field', filterByField);
       }
 
-      // Apply status filter (default to 'Open' if not specified)
       if (options?.status) {
         query = query.eq('status', options.status);
       } else {
-        // Default to showing only 'Open' jobs for candidates
         query = query.eq('status', 'Open');
       }
 
-      // Apply pagination
       if (options?.limit) {
         query = query.limit(options.limit);
       }
@@ -63,13 +57,10 @@ export const useJobs = () => {
 
   const createJob = async (jobData: CreateJobDto) => {
     try {
-      // Use a proper date handling approach
       const now = new Date();
       
-      // Log the date for debugging
       console.log('Creating job with date:', now.toISOString());
 
-      // Validate required fields
       if (!jobData.title || !jobData.description || !jobData.field) {
         throw new Error('Title, description, and field are required');
       }
@@ -152,7 +143,6 @@ export const useJobs = () => {
     }
   };
 
-  // Additional helper function to get job statistics
   const getJobStatistics = useCallback(() => {
     const total = jobs.length;
     const open = jobs.filter(j => j.status === 'Open').length;
@@ -165,7 +155,6 @@ export const useJobs = () => {
     return { total, open, closed, byField };
   }, [jobs]);
 
-  // Initial fetch
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);

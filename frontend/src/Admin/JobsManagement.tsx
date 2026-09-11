@@ -5,7 +5,8 @@ import { useJobs } from '../hooks/useJobs';
 import { useFields } from '../hooks/useFields';
 import { ApplicantsModal } from '../components/admin/ApplicantsModal';
 import type { Job } from '../types/job';
-
+import { logJobView, logJobCreate, logJobEdit, logCandidateApplied, logJobApplicationView } from '../utils/activityLogger';
+import toast from 'react-hot-toast';
 export default function JobsManagement() {
   const { jobs, loading, createJob, updateJob, deleteJob } = useJobs();
   const { fields, fetchFields } = useFields();
@@ -30,7 +31,6 @@ export default function JobsManagement() {
     status: 'Open' as 'Open' | 'Closed' | 'On Hold'
   });
 
-  // Fetch fields when component mounts
   useEffect(() => {
     fetchFields();
   }, []);
@@ -39,10 +39,8 @@ export default function JobsManagement() {
   const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Internship'];
   const statuses: Array<'Open' | 'Closed' | 'On Hold'> = ['Open', 'Closed', 'On Hold'];
 
-  // Get active fields for the dropdown
   const activeFields = fields.filter(field => field.status === 'Active');
 
-  // Filter jobs
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           job.field.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,7 +49,6 @@ export default function JobsManagement() {
     return matchesSearch && matchesStatus;
   });
 
-  // Fetch candidates
   useEffect(() => {
     fetchCandidates();
   }, []);
@@ -72,14 +69,26 @@ export default function JobsManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedJob) {
-      await updateJob(selectedJob.id, formData);
-    } else {
-      await createJob(formData);
+    try {
+      if (selectedJob) {
+        const changes = {
+          title: formData.title !== selectedJob.title ? { old: selectedJob.title, new: formData.title } : undefined,
+          field: formData.field !== selectedJob.field ? { old: selectedJob.field, new: formData.field } : undefined,
+          status: formData.status !== selectedJob.status ? { old: selectedJob.status, new: formData.status } : undefined
+        };
+        
+        await logJobEdit(selectedJob.id, formData.title, changes);
+        await updateJob(selectedJob.id, formData);
+      } else {
+        await logJobCreate(formData.title, formData.field);
+        await createJob(formData);
+      }
+      setIsModalOpen(false);
+      setShowCandidateBasedForm(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error saving job:', error);
     }
-    setIsModalOpen(false);
-    setShowCandidateBasedForm(false);
-    resetForm();
   };
 
   const resetForm = () => {
@@ -99,6 +108,8 @@ export default function JobsManagement() {
   };
 
   const handleEdit = (job: Job) => {
+    logJobView(job.id, job.title);
+    
     setSelectedJob(job);
     setFormData({
       title: job.title,
@@ -121,13 +132,14 @@ export default function JobsManagement() {
   };
 
   const handleViewApplicants = (job: Job) => {
+    logJobApplicationView(job.id, job.title);
+    
     setSelectedJobForApplicants(job);
     setShowApplicantsModal(true);
   };
 
   const handleCreateJobForCandidate = (candidate: any) => {
     setSelectedCandidate(candidate);
-    // Auto-fill form with candidate's profile
     setFormData({
       title: `${candidate.interested_field} Specialist`,
       description: `We are looking for a talented ${candidate.interested_field} professional to join our team.\n\n**About the Role:**\nThis is an excellent opportunity for someone with ${candidate.experience_level || 'relevant'} experience in ${candidate.interested_field}.\n\n**What We Offer:**\n- Competitive salary (${candidate.salary_range || 'negotiable'})\n- Flexible work arrangements\n- Professional development opportunities\n- Great team environment\n\n**Start Date:** ${candidate.availability === 'Immediate' ? 'Immediate start available' : 'Flexible start date'}\n\nIf you're passionate about ${candidate.interested_field} and ready to make an impact, we want to hear from you!`,
@@ -140,6 +152,17 @@ export default function JobsManagement() {
       status: 'Open'
     });
     setShowCandidateBasedForm(true);
+  };
+
+  const handleCandidateApply = async (candidateId: string, jobId: string, jobTitle: string) => {
+    try {
+      await logCandidateApplied(candidateId, jobId, jobTitle);
+      
+      toast.success('Candidate applied successfully!');
+    } catch (error) {
+      console.error('Error applying candidate:', error);
+      toast.error('Failed to apply candidate');
+    }
   };
 
   if (loading) {
@@ -500,7 +523,6 @@ export default function JobsManagement() {
                   </div>
                 </div>
               ) : (
-                // Job Creation Form Pre-filled with Candidate Data
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="bg-blue-50 p-4 rounded-lg mb-4">
                     <h3 className="font-semibold mb-2">Creating job for: {selectedCandidate.name}</h3>

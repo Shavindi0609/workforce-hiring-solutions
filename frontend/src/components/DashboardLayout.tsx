@@ -4,10 +4,11 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Settings, Download, LogOut, Menu, ChevronDown, Bell, User, X,
   UserPlus, Star, CircleDollarSign, BarChartBig, Briefcase, FileText, Camera,
-  Save, AlertCircle, Trash2, Users, CheckCircle,
+  Save, AlertCircle, Trash2, Users, CheckCircle, Activity
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import securityImage from '../assets/8.avif';
+import { ActivityLogger, useActivityLogger, logLogout, logLogin } from '../utils/activityLogger';
 
 interface Notification {
   id: string;
@@ -19,7 +20,6 @@ interface Notification {
   data: any;
 }
 
-// Helper functions for localStorage persistence
 const getStorageKey = (userId: string) => `deleted_notifications_${userId}`;
 
 const loadDeletedIds = (userId: string): Set<string> => {
@@ -45,6 +45,9 @@ const saveDeletedIds = (userId: string, ids: Set<string>) => {
 };
 
 export default function DashboardLayout() {
+  useActivityLogger();
+  const logger = ActivityLogger.getInstance();
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -61,6 +64,15 @@ export default function DashboardLayout() {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [notificationToDelete, setNotificationToDelete] = useState<string | null>(null);
+
+  const toggleSidebar = () => {
+    if (window.innerWidth < 1024) {
+      setMobileSidebarOpen(!mobileSidebarOpen);
+    } else {
+      setSidebarOpen(!sidebarOpen);
+    }
+  };
+
   const [profileForm, setProfileForm] = useState({
     full_name: '',
     email: '',
@@ -77,6 +89,81 @@ export default function DashboardLayout() {
   const clearTimeoutRef = useRef<number | null>(null);
   const isDeletingRef = useRef<boolean>(false);
   const deletedIdsRef = useRef<Set<string>>(new Set());
+  const loginLoggedRef = useRef<boolean>(false);
+  const lastUserIdRef = useRef<string>('');
+  const loginAttemptedRef = useRef<boolean>(false);
+  const logoutLoggedRef = useRef<boolean>(false);
+  const logoutAttemptedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (user && userProfile && !loginLoggedRef.current && !loginAttemptedRef.current) {
+      const userId = user.id;
+      
+      const sessionKey = `login_logged_${userId}`;
+      const alreadyLogged = sessionStorage.getItem(sessionKey) === 'true';
+      
+      if (alreadyLogged) {
+        loginLoggedRef.current = true;
+        lastUserIdRef.current = userId;
+        loginAttemptedRef.current = true;
+        return;
+      }
+      
+      loginAttemptedRef.current = true;
+      
+      logger.logActivity({
+        activity_type: 'login',
+        activity_description: `User ${user.email} logged in`,
+        metadata: {
+          email: user.email,
+          role: userProfile?.role,
+          login_time: new Date().toISOString()
+        }
+      }).then(() => {
+        console.log('Login activity logged');
+        loginLoggedRef.current = true;
+        lastUserIdRef.current = userId;
+        sessionStorage.setItem(sessionKey, 'true');
+      }).catch((error) => {
+        console.error(' Error logging login activity:', error);
+        loginAttemptedRef.current = false;
+      });
+    }
+  }, [user, userProfile, logger]);
+
+  useEffect(() => {
+    if (!user) {
+      loginLoggedRef.current = false;
+      lastUserIdRef.current = '';
+      loginAttemptedRef.current = false;
+      logoutLoggedRef.current = false;
+      logoutAttemptedRef.current = false;
+    } else {
+      const sessionKey = `login_logged_${user.id}`;
+      const alreadyLogged = sessionStorage.getItem(sessionKey) === 'true';
+      
+      if (alreadyLogged) {
+        loginLoggedRef.current = true;
+        lastUserIdRef.current = user.id;
+      } else {
+        loginAttemptedRef.current = false;
+      }
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user) {
+      const logoutSessionKey = `logout_logged_${user.id}`;
+      const alreadyLoggedOut = sessionStorage.getItem(logoutSessionKey) === 'true';
+      
+      if (alreadyLoggedOut) {
+        logoutLoggedRef.current = true;
+      } else {
+        logoutLoggedRef.current = false;
+        logoutAttemptedRef.current = false;
+      }
+    }
+  }, [user?.id]);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -96,7 +183,6 @@ export default function DashboardLayout() {
 
       if (error) throw error;
 
-      // Load deleted IDs from localStorage
       const deletedIds = loadDeletedIds(user.id);
       deletedIdsRef.current = deletedIds;
 
@@ -112,7 +198,6 @@ export default function DashboardLayout() {
 
   const deleteSingleNotification = async (notificationId: string) => {
     if (!user) return;
-
     setNotificationToDelete(notificationId);
     setShowDeleteConfirm(true);
   };
@@ -123,12 +208,9 @@ export default function DashboardLayout() {
     isDeletingRef.current = true;
 
     try {
-      // Add to deleted set
       deletedIdsRef.current.add(notificationToDelete);
-      // Save to localStorage
       saveDeletedIds(user.id, deletedIdsRef.current);
 
-      // PERMANENTLY DELETE from database
       const { error } = await supabase
         .from('notifications')
         .delete()
@@ -136,10 +218,8 @@ export default function DashboardLayout() {
 
       if (error) throw error;
 
-      // Remove from local state
       setNotifications(prev => prev.filter(n => n.id !== notificationToDelete));
       
-      // Update unread count
       const unread = notifications.filter(n => n.id !== notificationToDelete && !n.read).length;
       setUnreadCount(unread);
 
@@ -176,12 +256,9 @@ export default function DashboardLayout() {
         return;
       }
 
-      // Add all IDs to deleted set
       notificationIds.forEach(id => deletedIdsRef.current.add(id));
-      // Save to localStorage
       saveDeletedIds(user.id, deletedIdsRef.current);
 
-      // PERMANENTLY DELETE from database
       const { error } = await supabase
         .from('notifications')
         .delete()
@@ -252,7 +329,6 @@ export default function DashboardLayout() {
   };
 
   const handleNotificationClick = async (notification: Notification, e: React.MouseEvent) => {
-    // Prevent click if delete button was clicked
     if ((e.target as HTMLElement).closest('.delete-notification-btn')) {
       return;
     }
@@ -263,18 +339,15 @@ export default function DashboardLayout() {
 
     setIsNotificationsOpen(false);
 
-    // Navigate to jobs page for job-related notifications
     if (notification.type === 'new_job_application' || notification.type === 'job_update') {
       navigate('/admin/jobs');
     } else if (notification.type === 'new_candidate') {
       navigate('/admin/candidate-dashboard');
     } else {
-      // Default fallback
       navigate('/admin/dashboard');
     }
   };
 
-  // Setup real-time subscription
   useEffect(() => {
     if (!user) return;
 
@@ -342,7 +415,6 @@ export default function DashboardLayout() {
           
           if (oldId && user) {
             deletedIdsRef.current.add(oldId);
-            // Save to localStorage
             saveDeletedIds(user.id, deletedIdsRef.current);
             
             setNotifications(prev => {
@@ -374,7 +446,6 @@ export default function DashboardLayout() {
     };
   }, [user]);
 
-  // Get user
   useEffect(() => {
     const getUser = async () => {
       try {
@@ -385,7 +456,13 @@ export default function DashboardLayout() {
         if (user) {
           setUser(user);
           
-          // Load deleted IDs from localStorage
+          const sessionKey = `login_logged_${user.id}`;
+          const alreadyLogged = sessionStorage.getItem(sessionKey) === 'true';
+          if (alreadyLogged) {
+            loginLoggedRef.current = true;
+            lastUserIdRef.current = user.id;
+          }
+          
           const deletedIds = loadDeletedIds(user.id);
           deletedIdsRef.current = deletedIds;
           
@@ -449,9 +526,14 @@ export default function DashboardLayout() {
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
+        loginLoggedRef.current = false;
+        lastUserIdRef.current = '';
+        loginAttemptedRef.current = false;
+        logoutLoggedRef.current = false;
+        logoutAttemptedRef.current = false;
+        
         setUser(session.user);
         
-        // Load deleted IDs from localStorage for the new session
         const deletedIds = loadDeletedIds(session.user.id);
         deletedIdsRef.current = deletedIds;
         
@@ -477,9 +559,16 @@ export default function DashboardLayout() {
         setUserProfile(null);
         setNotifications([]);
         setUnreadCount(0);
-        // Clear deleted IDs on logout
         deletedIdsRef.current.clear();
-        // Don't clear localStorage - keep the deleted IDs persisted
+        loginLoggedRef.current = false;
+        lastUserIdRef.current = '';
+        loginAttemptedRef.current = false;
+        logoutLoggedRef.current = false;
+        logoutAttemptedRef.current = false;
+        const sessionKey = `login_logged_${user?.id || ''}`;
+        sessionStorage.removeItem(sessionKey);
+        const logoutSessionKey = `logout_logged_${user?.id || ''}`;
+        sessionStorage.removeItem(logoutSessionKey);
       }
     });
     
@@ -525,28 +614,88 @@ export default function DashboardLayout() {
 
   const handleLogout = async () => {
     try {
+      const userEmail = user?.email || 'unknown';
+      const userId = user?.id;
+      const userRole = userProfile?.role || 'user';
+      
+      console.log('Starting logout process...');
+      
+      if (userId) {
+        try {
+          console.log(' Attempting to log logout activity directly...');
+          
+          const { error } = await supabase
+            .from('activity_logs')
+            .insert([{
+              user_id: userId,
+              user_email: userEmail,
+              user_role: userRole,
+              activity_type: 'logout',
+              activity_description: `User ${userEmail} logged out`,
+              page_url: window.location.pathname,
+              page_name: 'Logout',
+              metadata: {
+                user_email: userEmail,
+                user_id: userId,
+                user_role: userRole,
+                logout_time: new Date().toISOString()
+              },
+              created_at: new Date().toISOString()
+            }]);
+          
+          if (error) {
+            console.error(' Direct logout insert failed:', error);
+            await logLogout(userEmail);
+          } else {
+            console.log('Logout activity logged directly to database!');
+          }
+        } catch (err) {
+          console.error('Error in direct logout insert:', err);
+          try {
+            await logLogout(userEmail);
+          } catch (fallbackErr) {
+            console.error(' Fallback logout logging also failed:', fallbackErr);
+          }
+        }
+      } else {
+        console.warn('No userId available, using email only for logout');
+        try {
+          await logLogout(userEmail);
+        } catch (err) {
+          console.error('Logout logging failed:', err);
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log(' Signing out user...');
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      console.log(' User signed out successfully');
+      
       setNotifications([]);
       setUnreadCount(0);
-      // Clear the in-memory set but keep localStorage
       deletedIdsRef.current.clear();
       isDeletingRef.current = false;
+      loginLoggedRef.current = false;
+      lastUserIdRef.current = '';
+      loginAttemptedRef.current = false;
+      logoutAttemptedRef.current = false;
+      if (userId) {
+        const logoutSessionKey = `logout_logged_${userId}`;
+        sessionStorage.setItem(logoutSessionKey, 'true');
+        const loginSessionKey = `login_logged_${userId}`;
+        sessionStorage.removeItem(loginSessionKey);
+      }
+      
       navigate('/signin');
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error(' Error logging out:', error);
+      navigate('/signin');
     }
   };
 
-  const toggleSidebar = () => {
-    if (window.innerWidth < 1024) {
-      setMobileSidebarOpen(!mobileSidebarOpen);
-    } else {
-      setSidebarOpen(!sidebarOpen);
-    }
-  };
-
-  // Image handling functions
   const extractFilePath = (url: string) => {
     try {
       const urlObj = new URL(url);
@@ -715,6 +864,7 @@ export default function DashboardLayout() {
     { icon: <Star size={20}/>, label: "Skills", to: "/admin/skills" },
     { icon: <BarChartBig size={20}/>, label: "Reports", to: "/admin/reports" },
     { icon: <CircleDollarSign size={20}/>, label: "Salary Insights", to: "/admin/salary-insights" },
+    { icon: <Activity size={20}/>, label: "Activity Log", to: "/admin/activity-dashboard" },
     { icon: <Settings size={20}/>, label: "Settings", to: "/settings" },
     { icon: <FileText size={20}/>, label: "Jobs", to: "/admin/jobs" },
     { icon: <Download size={20}/>, label: "Export Data", to: "/exportdata" },
@@ -1108,7 +1258,6 @@ export default function DashboardLayout() {
                                 )}
                               </div>
                             </button>
-                            {/* Delete button for single notification */}
                             <button
                               onClick={() => deleteSingleNotification(notification.id)}
                               className="delete-notification-btn absolute top-2 right-2 p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"

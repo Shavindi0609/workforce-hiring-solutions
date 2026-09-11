@@ -6,6 +6,11 @@ import { CandidateModal } from '../components/CandidateModal';
 import type { Candidate, CreateCandidateDto } from '../types/candidate';
 import CandidateDetailsModal from '../components/admin/CandidateDetailsModal';
 import toast from 'react-hot-toast';
+import { 
+  logCandidateView, 
+  logCVDownload,
+  logExportData 
+} from '../utils/activityLogger';
 
 function generateCandidateId(id: string, createdAt: string): string {
     const year = new Date(createdAt).getFullYear();
@@ -56,9 +61,9 @@ export default function CandidatesPage() {
 
     const withMatch = candidates
         .filter(candidate => {
-            const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                 candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                 candidate.field.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = candidate.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 candidate.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 candidate.field?.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesField = fieldFilter === 'All Fields' || candidate.field === fieldFilter;
             const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
             const matchesAvailability = availabilityFilter === 'All' || candidate.availability === availabilityFilter;
@@ -87,6 +92,9 @@ export default function CandidatesPage() {
     }, []);
 
     const handleEditCandidate = useCallback((candidate: Candidate) => {
+        if (candidate.id && candidate.name) {
+            logCandidateView(candidate.id, candidate.name);
+        }
         setSelectedCandidate(candidate);
         setModalTitle('Edit Candidate');
         setIsModalOpen(true);
@@ -94,15 +102,25 @@ export default function CandidatesPage() {
 
     const handleDeleteCandidate = useCallback(async (id: string) => {
         if (window.confirm('Are you sure you want to delete this candidate?')) {
-            await deleteCandidate(id);
+            try {
+                await deleteCandidate(id);
+            } catch (error) {
+                console.error('Error deleting candidate:', error);
+                
+            }
         }
     }, [deleteCandidate]);
 
     const handleSubmit = useCallback(async (data: CreateCandidateDto | Partial<Candidate>) => {
-        if (selectedCandidate) {
-            await updateCandidate(selectedCandidate.id, data);
-        } else {
-            await createCandidate(data as CreateCandidateDto);
+        try {
+            if (selectedCandidate) {
+                await updateCandidate(selectedCandidate.id, data);
+                
+            } else {
+                await createCandidate(data as CreateCandidateDto);      
+            }
+        } catch (error) {
+            console.error('Error saving candidate:', error);
         }
     }, [selectedCandidate, updateCandidate, createCandidate]);
 
@@ -116,27 +134,45 @@ export default function CandidatesPage() {
     }, [fetchCandidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
 
     const handleViewCandidate = useCallback((candidateId: string) => {
+        const candidate = candidates.find(c => c.id === candidateId);
+        if (candidate && candidate.id && candidate.name) {
+            logCandidateView(candidateId, candidate.name);
+        }
         setSelectedCandidateId(candidateId);
         setIsDetailsModalOpen(true);
-    }, []);
+    }, [candidates]);
 
     const handleCloseDetailsModal = useCallback(() => {
         setIsDetailsModalOpen(false);
         setSelectedCandidateId(null);
     }, []);
 
+    const handleDownloadCV = useCallback((candidateId: string, candidateName: string, cvUrl: string) => {
+        if (!cvUrl) {
+            toast.error('No CV available for this candidate');
+            return;
+        }
+        
+        if (candidateId) {
+            logCVDownload(candidateId, candidateName);
+        }
+        
+        window.open(cvUrl, '_blank');
+        toast.success(`Downloading CV for ${candidateName}`);
+    }, []);
+
     const exportToCSV = useCallback((data: Candidate[]) => {
         const headers = ['Candidate ID', 'Name', 'Email', 'Phone', 'Field', 'Experience', 'Status', 'Availability', 'Salary Range'];
         const csvRows = data.map(c => [
             `"${generateCandidateId(c.id, c.created_at || new Date().toISOString())}"`,
-            `"${c.name}"`,
-            `"${c.email}"`,
-            `"${c.phone}"`,
-            `"${c.field}"`,
-            `"${c.experience}"`,
-            `"${c.status}"`,
-            `"${c.availability}"`,
-            `"${c.salary_range}"`
+            `"${c.name || ''}"`,
+            `"${c.email || ''}"`,
+            `"${c.phone || ''}"`,
+            `"${c.field || ''}"`,
+            `"${c.experience || ''}"`,
+            `"${c.status || ''}"`,
+            `"${c.availability || ''}"`,
+            `"${c.salary_range || ''}"`
         ]);
         
         const csvContent = [
@@ -208,22 +244,20 @@ export default function CandidatesPage() {
                     fillColor: [243, 244, 246],
                 },
                 columnStyles: {
-                    0: { cellWidth: 32, halign: 'center' },  // Candidate ID - increased
-                    1: { cellWidth: 32, halign: 'left' },    // Name - increased
-                    2: { cellWidth: 42, halign: 'left' },    // Email - increased
-                    3: { cellWidth: 26, halign: 'left' },    // Phone - increased
-                    4: { cellWidth: 28, halign: 'left' },    // Field - increased
-                    5: { cellWidth: 28, halign: 'center' },  // Experience - increased
-                    6: { cellWidth: 25, halign: 'center' },  // Status - increased
-                    7: { cellWidth: 28, halign: 'center' },  // Availability - increased
-                    8: { cellWidth: 34, halign: 'left' },    // Salary Range - increased
+                    0: { cellWidth: 32, halign: 'center' },
+                    1: { cellWidth: 32, halign: 'left' },
+                    2: { cellWidth: 42, halign: 'left' },
+                    3: { cellWidth: 26, halign: 'left' },
+                    4: { cellWidth: 28, halign: 'left' },
+                    5: { cellWidth: 28, halign: 'center' },
+                    6: { cellWidth: 25, halign: 'center' },
+                    7: { cellWidth: 28, halign: 'center' },
+                    8: { cellWidth: 34, halign: 'left' },
                 },
                 margin: { left: 10, right: 10 }, 
                 tableWidth: 'auto',
                 showHead: 'everyPage',
                 didParseCell: function(data) {
-                   
-                    // Style Candidate ID with blue color
                     if (data.section === 'body' && data.column.index === 0) {
                         data.cell.styles.textColor = [37, 99, 235];
                         data.cell.styles.fontStyle = 'bold';
@@ -270,6 +304,8 @@ export default function CandidatesPage() {
                 toast.error('No candidates to export');
                 return;
             }
+
+            await logExportData(format.toUpperCase(), dataToExport.length);
 
             if (format === 'csv') {
                 exportToCSV(dataToExport);
@@ -320,18 +356,17 @@ export default function CandidatesPage() {
             .map(k => k.trim().toLowerCase())
             .filter(Boolean);
 
-        if (keywords.length === 0) return -1; // keyword search not active
+        if (keywords.length === 0) return -1;
 
         const searchableParts: string[] = [
-            candidate.name,
-            candidate.field,
-            candidate.experience,
-            candidate.status,
-            candidate.availability,
+            candidate.name || '',
+            candidate.field || '',
+            candidate.experience || '',
+            candidate.status || '',
+            candidate.availability || '',
             candidate.cv_text ?? '', 
             ...(candidate.skills ?? []),
         ];
-
 
         const searchableText = searchableParts.join(' ').toLowerCase();
 
@@ -342,7 +377,7 @@ export default function CandidatesPage() {
     return (
         <>
             <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-                {/* Header Section - Responsive */}
+                {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                     <div>
                         <h1 className="text-xl sm:text-2xl font-bold">Candidates</h1>
@@ -405,7 +440,7 @@ export default function CandidatesPage() {
                     </div>
                 </div>
 
-                {/* Stats Cards - Responsive Grid */}
+                {/* Stats Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
                     <StatCard title="Total Candidates" value={stats.total.toLocaleString()} sub="100% of total" />
                     <StatCard title="Actively Looking" value={stats.activelyLooking.toLocaleString()} sub={`${stats.activelyLookingPercentage.toFixed(1)}%`} color="text-green-600" />
@@ -413,10 +448,9 @@ export default function CandidatesPage() {
                     <StatCard title="Available Immediately" value={stats.availableImmediately.toLocaleString()} sub={`${stats.availableImmediatelyPercentage.toFixed(1)}%`} color="text-blue-600" />
                 </div>
 
-                {/* Search and Filters - Responsive */}
+                {/* Search and Filters */}
                 <div className="bg-white p-3 sm:p-4 rounded-2xl border border-gray-200 mb-6">
                     <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3 sm:gap-4">
-
                         <div className="relative flex-grow">
                             <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
                             <input 
@@ -428,21 +462,22 @@ export default function CandidatesPage() {
                             />
                         </div>
                         
-                    <div className="relative flex-grow">
-                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="CV keyword search (e.g. react, node, aws)..." 
-                            className="w-full pl-10 pr-4 py-2 border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={cvKeywords}
-                            onChange={(e) => setCvKeywords(e.target.value)}
-                        />
-                        {cvKeywords && (
-                            <p className="text-xs text-gray-400 mt-1 ml-1">
-                                Matching against name, field, experience, skills
-                            </p>
-                        )}
-                    </div>
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                            <input 
+                                type="text" 
+                                placeholder="CV keyword search (e.g. react, node, aws)..." 
+                                className="w-full pl-10 pr-4 py-2 border border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                value={cvKeywords}
+                                onChange={(e) => setCvKeywords(e.target.value)}
+                            />
+                            {cvKeywords && (
+                                <p className="text-xs text-gray-400 mt-1 ml-1">
+                                    Matching against name, field, experience, skills
+                                </p>
+                            )}
+                        </div>
+                        
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-1 gap-2 sm:gap-3">
                             <select
                                 value={fieldFilter}
@@ -484,7 +519,7 @@ export default function CandidatesPage() {
                     </div>
                 </div>
 
-                {/* Candidates Table - Horizontally scrollable on mobile */}
+                {/* Candidates Table */}
                 <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse min-w-[800px] lg:min-w-full">
@@ -506,72 +541,96 @@ export default function CandidatesPage() {
                                 </tr>
                             </thead>
                             <tbody className="text-sm">
-                                {filteredCandidates.map((candidate) => (
-                                    <tr key={candidate.id} className="border-b hover:bg-gray-50 transition-colors">
-                                        <td className="p-3 sm:p-4">
-                                            <input type="checkbox" className="rounded" />
-                                        </td>
-                                        <td className="p-3 sm:p-4">
-                                            <div className="flex items-center gap-2 sm:gap-3">
-                                                <img src={candidate.avatar_url} className="w-8 h-8 rounded-full object-cover flex-shrink-0" alt="" />
-                                                <div className="min-w-0">
-                                                    <p className="font-medium text-gray-900 text-sm truncate">{candidate.name}</p>
-                                                    <p className="text-xs text-gray-400 truncate">{candidate.email}</p>
-                                                    <p className="text-xs text-gray-400 hidden sm:block truncate">{candidate.phone}</p>
+                                {filteredCandidates.map((candidate) => {
+                                    const candidateName: string = candidate.name || 'Candidate';
+                                    const candidateId: string = candidate.id;
+                                    const cvUrl: string | undefined = candidate.cv_url;
+                                    
+                                    return (
+                                        <tr key={candidateId} className="border-b hover:bg-gray-50 transition-colors">
+                                            <td className="p-3 sm:p-4">
+                                                <input type="checkbox" className="rounded" />
+                                            </td>
+                                            <td className="p-3 sm:p-4">
+                                                <div className="flex items-center gap-2 sm:gap-3">
+                                                    <img 
+                                                        src={candidate.avatar_url || '/default-avatar.png'} 
+                                                        className="w-8 h-8 rounded-full object-cover flex-shrink-0" 
+                                                        alt={candidateName}
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).src = '/default-avatar.png';
+                                                        }}
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <p className="font-medium text-gray-900 text-sm truncate">{candidateName}</p>
+                                                        <p className="text-xs text-gray-400 truncate">{candidate.email || ''}</p>
+                                                        <p className="text-xs text-gray-400 hidden sm:block truncate">{candidate.phone || ''}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-3 sm:p-4 font-medium hidden sm:table-cell">{candidate.field}</td>
-                                        <td className="p-3 sm:p-4 hidden md:table-cell">{candidate.experience}</td>
-                                        <td className="p-3 sm:p-4">
-                                            <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${
-                                                candidate.status === 'Actively Looking' 
-                                                    ? 'bg-green-100 text-green-700' 
-                                                    : 'bg-orange-100 text-orange-700'
-                                            }`}>
-                                                {candidate.status === 'Actively Looking' ? 'Active' : 'Open'}
-                                            </span>
-                                        </td>
-                                        {cvKeywords.trim() && (
-                                        <td className="p-3 sm:p-4">
-                                            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                                candidate.matchPercentage >= 70 ? 'bg-green-100 text-green-700' :
-                                                candidate.matchPercentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                                                'bg-gray-100 text-gray-600'
-                                            }`}>
-                                                {candidate.matchPercentage}%
-                                            </span>
-                                        </td>
-                                    )}
-                                        <td className="p-3 sm:p-4 hidden lg:table-cell">{candidate.availability}</td>
-                                        <td className="p-3 sm:p-4 hidden xl:table-cell">{candidate.salary_range}</td>
-                                        <td className="p-3 sm:p-4">
-                                            <div className="flex items-center justify-center gap-1 sm:gap-2">
-                                                <button 
-                                                    onClick={() => handleEditCandidate(candidate)}
-                                                    className="p-1.5 sm:p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteCandidate(candidate.id)}
-                                                    className="p-1.5 sm:p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleViewCandidate(candidate.id)}
-                                                    className="p-1.5 sm:p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors"
-                                                    title="View Details"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="p-3 sm:p-4 font-medium hidden sm:table-cell">{candidate.field || ''}</td>
+                                            <td className="p-3 sm:p-4 hidden md:table-cell">{candidate.experience || ''}</td>
+                                            <td className="p-3 sm:p-4">
+                                                <span className={`inline-flex px-2 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${
+                                                    candidate.status === 'Actively Looking' 
+                                                        ? 'bg-green-100 text-green-700' 
+                                                        : 'bg-orange-100 text-orange-700'
+                                                }`}>
+                                                    {candidate.status === 'Actively Looking' ? 'Active' : 'Open'}
+                                                </span>
+                                            </td>
+                                            {cvKeywords.trim() && (
+                                            <td className="p-3 sm:p-4">
+                                                <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                                    candidate.matchPercentage >= 70 ? 'bg-green-100 text-green-700' :
+                                                    candidate.matchPercentage >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                    {candidate.matchPercentage}%
+                                                </span>
+                                            </td>
+                                        )}
+                                            <td className="p-3 sm:p-4 hidden lg:table-cell">{candidate.availability || ''}</td>
+                                            <td className="p-3 sm:p-4 hidden xl:table-cell">{candidate.salary_range || ''}</td>
+                                            <td className="p-3 sm:p-4">
+                                                <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                                    <button 
+                                                        onClick={() => handleEditCandidate(candidate)}
+                                                        className="p-1.5 sm:p-1 text-blue-500 hover:bg-blue-50 rounded transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteCandidate(candidateId)}
+                                                        className="p-1.5 sm:p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleViewCandidate(candidateId)}
+                                                        className="p-1.5 sm:p-1 text-gray-400 hover:bg-gray-100 rounded transition-colors"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    {cvUrl && (
+                                                        <button 
+                                                            onClick={() => {
+                                                                handleDownloadCV(candidateId, candidateName, cvUrl);
+                                                            }}
+                                                            className="p-1.5 sm:p-1 text-green-500 hover:bg-green-50 rounded transition-colors"
+                                                            title="Download CV"
+                                                        >
+                                                            <Download size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
@@ -582,7 +641,7 @@ export default function CandidatesPage() {
                         </div>
                     )}
 
-                    {/* Pagination Footer - Responsive */}
+                    {/* Pagination Footer */}
                     <div className="px-4 sm:px-6 py-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500 bg-gray-50">
                         <p className="text-xs sm:text-sm">Showing {filteredCandidates.length} of {candidates.length} candidates</p>
                         <div className="flex gap-2">
@@ -593,7 +652,7 @@ export default function CandidatesPage() {
                     </div>
                 </div>
 
-                {/* Candidate Modal (Add/Edit) */}
+                {/* Candidate Modal */}
                 <CandidateModal
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
@@ -604,7 +663,7 @@ export default function CandidatesPage() {
                 />
             </div>
 
-            {/* Candidate Details Modal (View) */}
+            {/* Candidate Details Modal */}
             {isDetailsModalOpen && selectedCandidateId && (
                 <CandidateDetailsModal
                     candidateId={selectedCandidateId}
