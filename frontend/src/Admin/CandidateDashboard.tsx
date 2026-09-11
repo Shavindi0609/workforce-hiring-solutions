@@ -51,19 +51,6 @@ export default function CandidatesPage() {
     const uniqueStatuses = useMemo(() => ['All', ...new Set(candidates.map(c => c.status))],[candidates]);
     const uniqueAvailability = useMemo(() => ['All', ...new Set(candidates.map(c => c.availability))],[candidates]);
 
-    // Apply filters
-    // const filteredCandidates = useMemo(() => {
-    //     return candidates.filter(candidate => {
-    //         const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    //                              candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    //                              candidate.field.toLowerCase().includes(searchTerm.toLowerCase());
-    //         const matchesField = fieldFilter === 'All Fields' || candidate.field === fieldFilter;
-    //         const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
-    //         const matchesAvailability = availabilityFilter === 'All' || candidate.availability === availabilityFilter;
-    //         return matchesSearch && matchesField && matchesStatus && matchesAvailability;
-    //     });
-    // }, [candidates, searchTerm, fieldFilter, statusFilter, availabilityFilter]);
-
     const filteredCandidates = useMemo(() => {
     const isKeywordSearchActive = cvKeywords.trim().length > 0;
 
