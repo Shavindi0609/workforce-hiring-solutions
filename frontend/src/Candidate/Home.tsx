@@ -189,7 +189,8 @@ export default function Home() {
 
     try {
       // Always navigate to sign in page
-      navigate('/signin');
+      // navigate('/signin');
+      navigate('/candidate/registration/basic');
     } catch (error) {
       console.error('Error navigating to sign in:', error);
       navigate('/signin');
@@ -197,7 +198,6 @@ export default function Home() {
       setIsLoading(false);
     }
   };
-
   // Show loading state while checking auth
   if (isLoadingAuth) {
     return (
